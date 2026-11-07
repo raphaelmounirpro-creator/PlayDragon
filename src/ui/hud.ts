@@ -1,12 +1,6 @@
 import { BOOST_FACTOR } from '../config';
-import { ABILITIES, AbilityId } from '../logic/abilities';
-
-export interface AbilityView {
-  id: AbilityId;
-  ready: boolean;
-  active: boolean;
-  cooldownRatio: number;
-}
+import { ABILITIES, type AbilityId, type AbilityStatus } from '../logic/abilities';
+import { element } from './dom';
 
 const ABILITY_ICONS: Record<AbilityId, string> = {
   triple: '<circle cx="5" cy="15" r="2.6"/><circle cx="12" cy="8.5" r="3.2"/><circle cx="19" cy="15" r="2.6"/>',
@@ -14,12 +8,6 @@ const ABILITY_ICONS: Record<AbilityId, string> = {
   heal: '<path d="M12 20.5S4.5 15.8 4.5 9.8A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6c0 6-7.5 10.7-7.5 10.7z"/>',
   meteor: '<circle cx="15.5" cy="8.5" r="4.5"/><path d="M12 13L4 21M9.5 9.5L5 14M14.5 14.5L10 19" stroke-width="2" stroke-linecap="round" fill="none"/>',
 };
-
-function element<T extends HTMLElement>(id: string): T {
-  const found = document.getElementById(id);
-  if (!found) throw new Error(`Missing element #${id}`);
-  return found as T;
-}
 
 export interface HudValues {
   dragonHp: number;
@@ -35,7 +23,6 @@ export interface HudValues {
 /** Everything drawn over the 3D view during a game: bars, score, banners, powers. */
 export class Hud {
   private readonly hud = element('hud');
-  private readonly pause = element('pause');
   private readonly dragonHp = element('dragon-hp');
   private readonly castleMeter = element('castle-meter');
   private readonly castleLabel = element('castle-label');
@@ -49,9 +36,13 @@ export class Hud {
   private readonly crosshair = element('crosshair');
   private readonly banner = element('banner');
   private readonly flash = element('damage-flash');
+  private readonly hint = element('hint');
+  /** Where the edge-of-screen threat arrows live. */
+  readonly threatLayer = element('threats');
   private readonly speed = element('speed');
   private readonly abilityButtons = new Map<AbilityId, HTMLButtonElement>();
   private bannerTimer = 0;
+  private hitTimer = 0;
 
   /** Builds the bottom-left buttons; a click (or its hotkey) calls `onUse`. */
   createAbilityBar(onUse: (id: AbilityId) => void): void {
@@ -61,9 +52,8 @@ export class Hud {
       button.type = 'button';
       button.className = 'ability';
       button.tabIndex = -1; // never keep focus, or Space (fire) would also press the button
-      button.title = `${ability.name} — ${ability.cost} points (touche ${ability.hotkey})`;
       button.innerHTML = `
-        <span class="ability-key">${ability.hotkey}</span>
+        <span class="ability-key"></span>
         <svg class="ability-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" aria-hidden="true">${ABILITY_ICONS[ability.id]}</svg>
         <span class="ability-name">${ability.name}</span>
         <span class="ability-cost">${ability.cost}</span>
@@ -75,13 +65,29 @@ export class Hud {
     }
   }
 
-  updateAbilities(views: AbilityView[]): void {
-    for (const view of views) {
-      const button = this.abilityButtons.get(view.id);
+  /**
+   * The key and price shown on each button: keys can be rebound, the controller has its own
+   * buttons and the upgrade lowers prices. Cheap enough to call every frame.
+   */
+  labelAbilities(label: (index: number) => { key: string; cost: number }): void {
+    ABILITIES.forEach((ability, index) => {
+      const button = this.abilityButtons.get(ability.id);
+      const { key, cost } = label(index);
+      const title = `${ability.name} — ${cost} points (touche ${key})`;
+      if (!button || button.title === title) return;
+      button.title = title;
+      button.querySelector('.ability-key')!.textContent = key;
+      button.querySelector('.ability-cost')!.textContent = String(cost);
+    });
+  }
+
+  updateAbilities(statuses: AbilityStatus[]): void {
+    for (const status of statuses) {
+      const button = this.abilityButtons.get(status.id);
       if (!button) continue;
-      button.classList.toggle('is-ready', view.ready);
-      button.classList.toggle('is-active', view.active);
-      button.style.setProperty('--cooldown', String(view.cooldownRatio));
+      button.classList.toggle('is-ready', status.ready);
+      button.classList.toggle('is-active', status.active);
+      button.style.setProperty('--cooldown', String(status.cooldownRatio));
     }
   }
 
@@ -93,16 +99,12 @@ export class Hud {
 
   hide(): void {
     this.hud.classList.add('hidden');
-    this.setPaused(false);
   }
 
-  showSiege(): void {
+  /** `controls` names the player's own keys (or stick) for circling the castle. */
+  showSiege(controls: string): void {
     this.castleMeter.classList.remove('hidden');
-    this.announce('Le château est en vue ! Q / D pour en faire le tour');
-  }
-
-  setPaused(paused: boolean): void {
-    this.pause.classList.toggle('hidden', !paused);
+    this.announce(`Le château est en vue ! ${controls} pour en faire le tour`);
   }
 
   setMuted(muted: boolean): void {
@@ -124,6 +126,21 @@ export class Hud {
     this.journey.style.width = `${Math.min(1, values.journey) * 100}%`;
     this.bannerTimer -= dt;
     if (this.bannerTimer <= 0) this.banner.classList.remove('visible');
+    this.hitTimer -= dt;
+    if (this.hitTimer <= 0) this.crosshair.classList.remove('is-hit', 'is-kill');
+  }
+
+  /** The crosshair flares when a shot lands (more when it kills). */
+  hitMarker(kill: boolean): void {
+    this.crosshair.classList.remove('is-hit', 'is-kill');
+    this.crosshair.classList.add(kill ? 'is-kill' : 'is-hit');
+    this.hitTimer = 0.18;
+  }
+
+  /** Tutorial hint above the journey bar, or none. */
+  showHint(text: string | null): void {
+    this.hint.classList.toggle('hidden', text === null);
+    if (text !== null && this.hint.textContent !== text) this.hint.textContent = text;
   }
 
   moveCrosshair(x: number, y: number): void {

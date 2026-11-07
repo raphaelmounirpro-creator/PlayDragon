@@ -66,7 +66,10 @@ export interface CastleLayout {
   roof: string;
 }
 
-export type VoyageEventType = 'gargoyles' | 'shooters' | 'bats' | 'wyvern' | 'guardian';
+export type VoyageEventType = 'gargoyles' | 'shooters' | 'bats' | 'wyvern' | 'boss';
+
+/** The boss that bars the way at the end of each journey. */
+export type BossKind = 'guardian' | 'queen' | 'rival';
 
 /** Something that happens once the journey reaches `at` (0 = start, 1 = castle). */
 export interface VoyageEvent {
@@ -86,6 +89,7 @@ export interface LevelDefinition {
   water: { color: string; glow: string };
   cloudTint: string;
   castle: CastleLayout;
+  boss: BossKind;
   events: VoyageEvent[];
 }
 
@@ -137,6 +141,7 @@ const SUNSET_VALLEY: LevelDefinition = {
   water: { color: '#ffd29a', glow: '#ff9a4a' },
   cloudTint: '#ffffff',
   castle: { halfSize: 62, towerHeight: 72, sideTowers: false, keepHeight: 96, towerHp: 3, keepHp: 6, archers: 4, mage: false, stone: '#d9c2ae', roof: '#2d2a36' },
+  boss: 'guardian',
   events: [
     event(0.05, 'gargoyles', 3),
     event(0.15, 'bats', 16),
@@ -146,7 +151,7 @@ const SUNSET_VALLEY: LevelDefinition = {
     event(0.58, 'gargoyles', 5),
     event(0.66, 'bats', 20),
     event(0.74, 'shooters', 3),
-    event(0.84, 'guardian'),
+    event(0.84, 'boss'),
   ],
 };
 
@@ -195,6 +200,7 @@ const AMBER_PEAKS: LevelDefinition = {
   water: { color: '#ffe2a8', glow: '#ffb35a' },
   cloudTint: '#fff2dd',
   castle: { halfSize: 74, towerHeight: 80, sideTowers: true, keepHeight: 112, towerHp: 3, keepHp: 7, archers: 6, mage: true, stone: '#cdb594', roof: '#3a2a30' },
+  boss: 'queen',
   events: [
     event(0.05, 'shooters', 2),
     event(0.13, 'gargoyles', 4),
@@ -205,7 +211,7 @@ const AMBER_PEAKS: LevelDefinition = {
     event(0.6, 'bats', 24),
     event(0.68, 'wyvern'),
     event(0.76, 'gargoyles', 6),
-    event(0.84, 'guardian'),
+    event(0.84, 'boss'),
   ],
 };
 
@@ -254,6 +260,7 @@ const BLOOD_MOON: LevelDefinition = {
   water: { color: '#ff8a6a', glow: '#ff3a2a' },
   cloudTint: '#7a5a62',
   castle: { halfSize: 82, towerHeight: 88, sideTowers: true, keepHeight: 128, towerHp: 4, keepHp: 8, archers: 8, mage: true, stone: '#7a6660', roof: '#1c1622' },
+  boss: 'rival',
   events: [
     event(0.04, 'bats', 18),
     event(0.12, 'gargoyles', 5),
@@ -265,7 +272,7 @@ const BLOOD_MOON: LevelDefinition = {
     event(0.64, 'shooters', 3),
     event(0.72, 'bats', 28),
     event(0.78, 'wyvern'),
-    event(0.85, 'guardian'),
+    event(0.85, 'boss'),
   ],
 };
 

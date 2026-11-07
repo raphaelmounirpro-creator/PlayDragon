@@ -579,3 +579,279 @@ kbd {
     animation: none;
   }
 }
+
+/* Feedback: hit marker, threats, hints ------------------------------------ */
+
+.crosshair {
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+
+.crosshair.is-hit {
+  transform: scale(1.35);
+  border-color: var(--cream);
+}
+
+.crosshair.is-kill {
+  transform: scale(1.7) rotate(45deg);
+  border-color: #fff4dc;
+  box-shadow: 0 0 18px rgba(255, 200, 120, 1);
+}
+
+.threats {
+  position: absolute;
+  inset: 0;
+}
+
+.threat {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-top: 13px solid transparent;
+  border-bottom: 13px solid transparent;
+  border-left: 22px solid var(--ember);
+  filter: drop-shadow(0 0 8px rgba(255, 120, 40, 0.9));
+  animation: threat-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.threat--boss {
+  border-top-width: 18px;
+  border-bottom-width: 18px;
+  border-left: 30px solid #ff4a2a;
+}
+
+.threat--projectile {
+  border-top-width: 8px;
+  border-bottom-width: 8px;
+  border-left: 14px solid var(--gold);
+  animation: none;
+  opacity: 0.85;
+}
+
+@keyframes threat-pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  max-width: min(640px, 90vw);
+  margin: 0;
+  padding: 10px 18px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 210, 140, 0.55);
+  border-radius: 4px;
+  background: rgba(20, 8, 6, 0.82);
+  color: var(--cream);
+  font-size: 16px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(255, 140, 50, 0.3);
+}
+
+/* Treasure and menu notes -------------------------------------------------- */
+
+.treasure {
+  margin: -14px 0 22px;
+  font-size: 15px;
+  color: var(--ember);
+}
+
+.controls-note {
+  max-width: 44em;
+  margin: 26px 0 0;
+  font-size: 13px;
+  color: rgba(255, 236, 205, 0.7);
+}
+
+/* Options and upgrades panels --------------------------------------------- */
+
+.screen--panel {
+  align-items: center;
+  padding: 24px;
+  background: rgba(14, 6, 4, 0.82);
+}
+
+.panel {
+  display: grid;
+  gap: 18px;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  padding: 26px 30px;
+  overflow-y: auto;
+  scrollbar-color: rgba(255, 150, 70, 0.55) transparent;
+  scrollbar-width: thin;
+  border: 1px solid rgba(255, 210, 140, 0.35);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(40, 16, 10, 0.95), rgba(20, 8, 6, 0.95));
+  box-shadow: 0 0 40px rgba(255, 120, 40, 0.2);
+}
+
+.panel > .cta {
+  justify-self: start;
+}
+
+.panel-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 30px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+
+.panel-body {
+  display: grid;
+  gap: 18px;
+}
+
+.options-heading {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+
+.options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 220, 170, 0.08);
+}
+
+.options-label {
+  font-size: 15px;
+  color: var(--gold);
+}
+
+.options-slider {
+  width: min(260px, 45vw);
+  accent-color: #ff9b42;
+}
+
+.key-button {
+  min-width: 120px;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 220, 170, 0.5);
+  border-radius: 4px;
+  background: rgba(30, 12, 8, 0.7);
+  color: var(--cream);
+  font-family: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.key-button.is-waiting {
+  border-color: var(--gold);
+  color: var(--ember);
+}
+
+.upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.upgrade {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid rgba(255, 210, 140, 0.3);
+  border-radius: 6px;
+  background: rgba(30, 12, 8, 0.6);
+}
+
+.upgrade h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 15px;
+  color: var(--cream);
+}
+
+.upgrade p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gold);
+}
+
+.upgrade-pips {
+  display: flex;
+  gap: 6px;
+}
+
+.pip {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+}
+
+.pip.is-on {
+  background: radial-gradient(circle, #fff1c8, #ff9b42);
+  box-shadow: 0 0 8px rgba(255, 160, 70, 0.9);
+}
+
+.upgrade-buy {
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.upgrade-buy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Level intro -------------------------------------------------------------- */
+
+.intro-card {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 14%;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+  animation: fade-in 0.8s ease both;
+}
+
+.intro-card h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(30px, 4.6vw, 60px);
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 3px 0 #3b1608, 0 0 30px rgba(255, 140, 50, 0.7);
+}
+
+.intro-card p {
+  margin: 0;
+  font-size: 18px;
+  color: var(--gold);
+}
+
+.intro-skip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 236, 205, 0.6);
+}
+
+.fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}

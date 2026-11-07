@@ -2,6 +2,8 @@ import type { FoeCue } from '../entities/foes/foe';
 import { Music, type Mood } from './music';
 
 const MASTER_VOLUME = 0.8;
+/** The score sits below the effects at full volume. */
+const MUSIC_LEVEL = 0.45;
 
 /**
  * All the game's sounds, synthesized live with the Web Audio API (no audio files):
@@ -12,6 +14,9 @@ export class Sound {
   private context: AudioContext | null = null;
   private master!: GainNode;
   private effects!: GainNode;
+  private musicBus!: GainNode;
+  private musicVolume = 0.7;
+  private effectsVolume = 0.9;
   private noise!: AudioBuffer;
   private windGain!: GainNode;
   private windFilter!: BiquadFilterNode;
@@ -25,9 +30,22 @@ export class Sound {
   }
 
   toggleMute(): boolean {
-    this.muted = !this.muted;
-    if (this.context) this.master.gain.setTargetAtTime(this.muted ? 0 : MASTER_VOLUME, this.context.currentTime, 0.05);
+    this.setMuted(!this.muted);
     return this.muted;
+  }
+
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.context) this.master.gain.setTargetAtTime(muted ? 0 : MASTER_VOLUME, this.context.currentTime, 0.05);
+  }
+
+  /** Volumes from the options screen, 0 to 1. */
+  setVolumes(music: number, effects: number): void {
+    this.musicVolume = music;
+    this.effectsVolume = effects;
+    if (!this.context) return;
+    this.musicBus.gain.setTargetAtTime(MUSIC_LEVEL * music, this.context.currentTime, 0.05);
+    this.effects.gain.setTargetAtTime(effects, this.context.currentTime, 0.05);
   }
 
   setMood(mood: Mood): void {
@@ -130,6 +148,7 @@ export class Sound {
     this.master.gain.value = this.muted ? 0 : MASTER_VOLUME;
     this.master.connect(compressor);
     this.effects = context.createGain();
+    this.effects.gain.value = this.effectsVolume;
     this.effects.connect(this.master);
 
     this.noise = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
@@ -147,10 +166,10 @@ export class Sound {
     wind.connect(this.windFilter).connect(this.windGain).connect(this.master);
     wind.start();
 
-    const musicBus = context.createGain();
-    musicBus.gain.value = 0.32;
-    musicBus.connect(this.master);
-    this.music = new Music(context, musicBus, this.noise);
+    this.musicBus = context.createGain();
+    this.musicBus.gain.value = MUSIC_LEVEL * this.musicVolume;
+    this.musicBus.connect(this.master);
+    this.music = new Music(context, this.musicBus, this.noise);
     this.music.setMood(this.mood);
   }
 

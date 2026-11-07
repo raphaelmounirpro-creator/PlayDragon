@@ -3,7 +3,6 @@ export type AbilityId = 'triple' | 'shield' | 'heal' | 'meteor';
 export interface AbilityDefinition {
   id: AbilityId;
   name: string;
-  hotkey: string;
   cost: number;
   /** Seconds the effect lasts (0 = instant). */
   duration: number;
@@ -11,10 +10,10 @@ export interface AbilityDefinition {
 }
 
 export const ABILITIES: AbilityDefinition[] = [
-  { id: 'triple', name: 'Triple feu', hotkey: '1', cost: 300, duration: 8, cooldown: 12 },
-  { id: 'shield', name: 'Bouclier', hotkey: '2', cost: 400, duration: 6, cooldown: 15 },
-  { id: 'heal', name: 'Soin', hotkey: '3', cost: 300, duration: 0, cooldown: 10 },
-  { id: 'meteor', name: 'Météore', hotkey: '4', cost: 600, duration: 0, cooldown: 8 },
+  { id: 'triple', name: 'Triple feu', cost: 300, duration: 8, cooldown: 12 },
+  { id: 'shield', name: 'Bouclier', cost: 400, duration: 6, cooldown: 15 },
+  { id: 'heal', name: 'Soin', cost: 300, duration: 0, cooldown: 10 },
+  { id: 'meteor', name: 'Météore', cost: 600, duration: 0, cooldown: 8 },
 ];
 
 /** Something points can be spent from (the game state). */
@@ -23,25 +22,41 @@ export interface Wallet {
   isPlaying(): boolean;
 }
 
+/** Where one power stands, as its button shows it. */
+export interface AbilityStatus {
+  id: AbilityId;
+  ready: boolean;
+  active: boolean;
+  /** Fraction of the cooldown still to wait, from 1 (just used) to 0 (ready). */
+  cooldownRatio: number;
+}
+
 /** Special powers bought with points: cost, duration and cooldown rules. No rendering here. */
 export class Abilities {
   private readonly remaining = new Map<AbilityId, number>();
   private readonly cooldowns = new Map<AbilityId, number>();
+  private costFactor = 1;
 
-  reset(): void {
+  /** Starts a run; `costFactor` below 1 makes every power cheaper (upgrade). */
+  reset(costFactor = 1): void {
     this.remaining.clear();
     this.cooldowns.clear();
+    this.costFactor = costFactor;
+  }
+
+  cost(id: AbilityId): number {
+    return Math.round(definition(id).cost * this.costFactor);
   }
 
   canActivate(id: AbilityId, wallet: Wallet): boolean {
-    return wallet.isPlaying() && this.cooldown(id) === 0 && wallet.score >= definition(id).cost;
+    return wallet.isPlaying() && this.cooldown(id) === 0 && wallet.score >= this.cost(id);
   }
 
   /** Spends the points and starts the ability; returns false when not allowed. */
   activate(id: AbilityId, wallet: Wallet): boolean {
     if (!this.canActivate(id, wallet)) return false;
     const ability = definition(id);
-    wallet.score -= ability.cost;
+    wallet.score -= this.cost(id);
     this.cooldowns.set(id, ability.cooldown);
     if (ability.duration > 0) this.remaining.set(id, ability.duration);
     return true;
@@ -55,9 +70,12 @@ export class Abilities {
     return this.cooldowns.get(id) ?? 0;
   }
 
-  /** Fraction of the cooldown still to wait, from 1 (just used) to 0 (ready). */
   cooldownRatio(id: AbilityId): number {
     return this.cooldown(id) / definition(id).cooldown;
+  }
+
+  statuses(wallet: Wallet): AbilityStatus[] {
+    return ABILITIES.map(({ id }) => ({ id, ready: this.canActivate(id, wallet), active: this.isActive(id), cooldownRatio: this.cooldownRatio(id) }));
   }
 
   update(dt: number): void {

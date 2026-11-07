@@ -10,13 +10,10 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
-import { BAT_BITE, BAT_SCORE } from '../../config';
+import { BAT } from '../../config';
 import { Effects, randomDirection } from '../../fx/particles';
 import { Foe, FoeContext } from './foe';
 
-const LIFETIME = 16;
-const BITE_RANGE = 8;
-const BITE_COOLDOWN = 2.5;
 const WORLD_UP = new Vector3(0, 1, 0);
 const EMBER = new Color(2.2, 0.8, 0.25);
 
@@ -55,7 +52,7 @@ function batKit(): BatKit {
  */
 export class Bat extends Foe {
   readonly radius = 7;
-  readonly score = BAT_SCORE;
+  readonly score = BAT.score;
   override readonly fragile = true;
   private readonly wings: [Mesh, Mesh];
   private angle = Math.random() * Math.PI * 2;
@@ -90,7 +87,7 @@ export class Bat extends Foe {
   update(dt: number, ctx: FoeContext): void {
     if (this.retreating(dt)) return;
     this.age += dt;
-    if (this.age > LIFETIME) this.retreat();
+    if (this.age > BAT.lifetime) this.retreat();
     this.phase += dt * 30;
     this.angle += this.orbitSpeed * dt;
     this.biteCooldown -= dt;
@@ -109,10 +106,10 @@ export class Bat extends Foe {
     this.wings[0].rotation.z = flap;
     this.wings[1].rotation.z = -flap;
 
-    if (this.diving && this.biteCooldown <= 0 && this.position.distanceTo(ctx.dragon) < BITE_RANGE) {
-      ctx.hurtDragon(BAT_BITE);
+    if (this.diving && this.biteCooldown <= 0 && this.position.distanceTo(ctx.dragon) < BAT.biteRange) {
+      ctx.hurtDragon(BAT.bite);
       ctx.cue('chirp');
-      this.biteCooldown = BITE_COOLDOWN;
+      this.biteCooldown = BAT.biteCooldown;
       this.diving = false;
     }
   }

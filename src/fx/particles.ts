@@ -216,6 +216,22 @@ export class Effects {
     }
   }
 
+  /** A burst of golden sparks: a ring collected, a healing power. */
+  sparkle(position: Vector3): void {
+    for (let i = 0; i < 40; i++) {
+      this.fire.emit({
+        position,
+        velocity: randomDirection().multiplyScalar(30 + Math.random() * 30),
+        life: 0.8,
+        size: 5,
+        endSize: 1,
+        color: new Color(3, 2.3, 1),
+        endColor: new Color(1.2, 0.5, 0.1),
+        drag: 2,
+      });
+    }
+  }
+
   update(dt: number): void {
     this.fire.update(dt);
     this.smoke.update(dt);
@@ -224,6 +240,23 @@ export class Effects {
   clear(): void {
     this.fire.clear();
     this.smoke.clear();
+  }
+}
+
+/**
+ * Particles per second turned into a count for this frame, so a continuous effect (a jet of
+ * flame) looks as dense at 165 FPS as at 60 FPS. Fractions carry over to the next frame.
+ */
+export class EmissionRate {
+  private carry = 0;
+
+  constructor(private readonly perSecond: number) {}
+
+  count(dt: number): number {
+    this.carry += dt * this.perSecond;
+    const whole = Math.floor(this.carry);
+    this.carry -= whole;
+    return whole;
   }
 }
 

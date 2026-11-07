@@ -34,8 +34,10 @@
         <span class="journey-castle" aria-hidden="true">♜</span>
       </div>
       <div id="abilities" class="abilities" aria-label="Pouvoirs spéciaux"></div>
+      <div id="threats" class="threats" aria-hidden="true"></div>
       <div id="crosshair" class="crosshair"></div>
       <div id="banner" class="banner"></div>
+      <p id="hint" class="hint hidden" role="status"></p>
       <div id="damage-flash" class="damage-flash"></div>
     </div>
 
@@ -54,15 +56,13 @@
         </div>
       </div>
       <p id="best-score" class="best-score"></p>
-      <button id="start" class="cta" type="button">Prendre son envol</button>
-      <ul class="controls">
-        <li><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou <kbd>↑←↓→</kbd> diriger, puis tourner autour du château</li>
-        <li><kbd>E</kbd> accélérer <kbd>A</kbd> freiner</li>
-        <li><kbd>1</kbd>–<kbd>4</kbd> pouvoirs (avec tes points)</li>
-        <li><kbd>Clic</kbd> / <kbd>Espace</kbd> cracher le feu</li>
-        <li><kbd>Échap</kbd> pause <kbd>M</kbd> son</li>
-        <li>Manette Xbox : stick gauche diriger, stick droit viser, <kbd>RT</kbd> feu, <kbd>RB</kbd>/<kbd>LT</kbd> vitesse, <kbd>X</kbd><kbd>Y</kbd><kbd>B</kbd><kbd>LB</kbd> pouvoirs, <kbd>A</kbd> valider</li>
-      </ul>
+      <p id="treasure" class="treasure"></p>
+      <div class="end-actions">
+        <button id="start" class="cta" type="button">Prendre son envol</button>
+        <button id="open-shop" class="cta cta--ghost" type="button">Améliorations</button>
+        <button id="open-options" class="cta cta--ghost" type="button">Options</button>
+      </div>
+      <p class="controls-note">Clavier, souris ou manette Xbox. Les commandes s'affichent pendant ta première partie ; tout se règle dans Options.</p>
     </section>
 
     <section id="end" class="screen hidden">
@@ -70,6 +70,7 @@
       <h1 id="end-title" class="title title--end"></h1>
       <p id="end-summary" class="tagline"></p>
       <p id="end-record" class="best-score"></p>
+      <p id="end-gold" class="treasure"></p>
       <div class="end-actions">
         <button id="next-level" class="cta hidden" type="button">Niveau suivant</button>
         <button id="restart" class="cta" type="button">Rejouer</button>
@@ -79,8 +80,37 @@
 
     <section id="pause" class="screen screen--light hidden">
       <h1 class="title title--end">Pause</h1>
-      <p class="tagline">Appuie sur <kbd>Échap</kbd> (ou <kbd>Start</kbd>) pour reprendre.</p>
+      <p class="tagline">Échap ou Start pour reprendre.</p>
+      <div class="end-actions">
+        <button id="pause-resume" class="cta" type="button">Reprendre</button>
+        <button id="pause-options" class="cta cta--ghost" type="button">Options</button>
+        <button id="pause-quit" class="cta cta--ghost" type="button">Quitter la partie</button>
+      </div>
     </section>
+
+    <section id="options" class="screen screen--panel hidden" aria-label="Options">
+      <div class="panel">
+        <h2 class="panel-title">Options</h2>
+        <div id="options-body" class="panel-body"></div>
+        <button id="options-close" class="cta" type="button">Retour</button>
+      </div>
+    </section>
+
+    <section id="shop" class="screen screen--panel hidden" aria-label="Améliorations">
+      <div class="panel">
+        <h2 class="panel-title">Améliorations</h2>
+        <p id="shop-gold" class="treasure"></p>
+        <div id="shop-body" class="upgrades"></div>
+        <button id="shop-close" class="cta" type="button">Retour</button>
+      </div>
+    </section>
+
+    <div id="intro-card" class="intro-card hidden" role="status">
+      <h2></h2>
+      <p></p>
+      <span class="intro-skip">Entrée, Espace ou clic pour passer</span>
+    </div>
+    <div id="fade" class="fade" aria-hidden="true"></div>
 
     <aside id="update-notice" class="update-notice hidden" role="status">
       <span class="update-text">Nouvelle version <b id="update-version"></b> prête.<br />Elle s'installera à la fermeture du jeu.</span>

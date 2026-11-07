@@ -1,15 +1,12 @@
 import { MathUtils, Vector3 } from 'three';
-import { WYVERN_BITE, WYVERN_SCORE } from '../../config';
+import { WYVERN } from '../../config';
 import { Dragon } from '../dragon';
 import { Foe, FoeContext } from './foe';
 
 type Mode = 'stalk' | 'overtake' | 'hover' | 'swoop';
 
 const LOOK = { scale: 0.42, skin: '#7a2e20' };
-const BITE_RANGE = 13;
-const HOVER_TIME = 4.5;
 const WORLD_UP = new Vector3(0, 1, 0);
-const SPEED: Record<Mode, number> = { stalk: 60, overtake: 170, hover: 110, swoop: 190 };
 
 /**
  * Rival wyvern: sneaks up from behind to bite, overtakes the dragon, hovers ahead
@@ -17,9 +14,10 @@ const SPEED: Record<Mode, number> = { stalk: 60, overtake: 170, hover: 110, swoo
  */
 export class Wyvern extends Foe {
   readonly radius = 12;
-  readonly score = WYVERN_SCORE;
+  readonly score = WYVERN.score;
+  override readonly indicator = 'enemy';
   private readonly body = new Dragon(LOOK);
-  private readonly velocity = new Vector3();
+  private readonly steering = new Vector3();
   private mode: Mode = 'stalk';
   private timer = 0;
   private readonly side = Math.random() < 0.5 ? -1 : 1;
@@ -35,17 +33,17 @@ export class Wyvern extends Foe {
     if (this.retreating(dt)) return;
     this.timer += dt;
     const target = this.target(ctx);
-    const speed = ctx.dragonVelocity.length() + SPEED[this.mode];
+    const speed = ctx.dragonVelocity.length() + WYVERN.speed[this.mode];
     const desired = target.clone().sub(this.position).normalize().multiplyScalar(speed);
-    const previous = this.velocity.clone();
-    this.velocity.lerp(desired, Math.min(1, 2.5 * dt));
-    this.position.addScaledVector(this.velocity, dt);
+    const previous = this.steering.clone();
+    this.steering.lerp(desired, Math.min(1, 2.5 * dt));
+    this.position.addScaledVector(this.steering, dt);
 
-    const right = new Vector3().crossVectors(this.velocity, WORLD_UP).normalize();
-    this.turn = MathUtils.damp(this.turn, MathUtils.clamp(this.velocity.clone().sub(previous).dot(right) / (dt * 120 + 1e-6), -1, 1), 4, dt);
-    this.face(this.mode === 'hover' ? ctx.dragon.clone().sub(this.position) : this.velocity);
+    const right = new Vector3().crossVectors(this.steering, WORLD_UP).normalize();
+    this.turn = MathUtils.damp(this.turn, MathUtils.clamp(this.steering.clone().sub(previous).dot(right) / (dt * 120 + 1e-6), -1, 1), 4, dt);
+    this.face(this.mode === 'hover' ? ctx.dragon.clone().sub(this.position) : this.steering);
     this.object.rotateZ(-this.turn * 0.6);
-    this.body.update(dt, ctx.time, { turn: this.turn, climb: MathUtils.clamp(this.velocity.y / 80, -1, 1), effort: this.mode === 'stalk' ? 0.3 : 1 });
+    this.body.update(dt, ctx.time, { turn: this.turn, climb: MathUtils.clamp(this.steering.y / 80, -1, 1), effort: this.mode === 'stalk' ? 0.3 : 1 });
     this.advance(ctx, target);
   }
 
@@ -70,15 +68,15 @@ export class Wyvern extends Foe {
 
   private advance(ctx: FoeContext, target: Vector3): void {
     const ahead = this.position.clone().sub(ctx.dragon).dot(ctx.heading);
-    if (this.mode === 'stalk' && this.position.distanceTo(ctx.dragon) < BITE_RANGE) {
-      ctx.hurtDragon(WYVERN_BITE);
+    if (this.mode === 'stalk' && this.position.distanceTo(ctx.dragon) < WYVERN.biteRange) {
+      ctx.hurtDragon(WYVERN.bite);
       ctx.cue('bite');
       this.body.openJaw();
       this.switchTo('overtake');
     } else if (this.mode === 'overtake' && this.position.distanceTo(target) < 30) {
       this.switchTo('hover');
       ctx.cue('shriek');
-    } else if (this.mode === 'hover' && this.timer > HOVER_TIME) {
+    } else if (this.mode === 'hover' && this.timer > WYVERN.hoverTime) {
       this.switchTo('swoop');
     } else if (this.mode === 'swoop' && ahead < -60) {
       this.switchTo('stalk');

@@ -1,18 +1,16 @@
 import { Color, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three';
-import { FIREBALL_COOLDOWN, FIREBALL_SPEED } from '../config';
+import { FIREBALL_BLAST, FIREBALL_COOLDOWN, FIREBALL_SPEED, FLAME_JET, METEOR, TRIPLE_SPREAD } from '../config';
 import type { Foe, Foes } from '../entities/foes/foe';
 import { Projectiles } from '../entities/projectiles';
-import { Effects, randomDirection } from '../fx/particles';
+import { Effects, EmissionRate, randomDirection } from '../fx/particles';
 import type { Castle } from '../world/castle';
 import type { Rock } from '../world/obstacles';
 
-const TRIPLE_SPREAD = 0.07;
-const METEOR_SPEED = 380;
-const METEOR_DAMAGE = 4;
-/** Explosions also hurt what is around them. */
-const FIREBALL_BLAST = 16;
-const METEOR_BLAST = 45;
+/** Explosion size on a bat: a swarm around the mouth must not flood the screen with fire. */
 const SMALL_BLAST = 0.3;
+const JET_FLAMES_PER_SECOND = 160;
+const JET_COLOR = new Color(2.4, 1.05, 0.3);
+const JET_END = new Color(0.9, 0.12, 0.02);
 const UP = new Vector3(0, 1, 0);
 
 export interface CombatEvents {
@@ -20,26 +18,31 @@ export interface CombatEvents {
   onCastleHit(partId: string, damage: number): boolean;
   isPartVulnerable(partId: string): boolean;
   onShieldBlocked(at: Vector3): void;
-  onFoeKilled(foe: Foe): void;
-  onExplosion(power: number): void;
+  /** Every hit on an enemy (for the hit marker); `killed` when it was the last one. */
+  onFoeHit(foe: Foe, killed: boolean): void;
+  onExplosion(power: number, at: Vector3): void;
 }
 
 interface Shot {
   damage: number;
   power: number;
   blast: number;
+  blastDamage: number;
   /** Fireball blasts only hurt fragile foes (bats); meteor blasts hurt every foe. */
   blastHurtsAll: boolean;
 }
 
-const FIREBALL: Shot = { damage: 1, power: 1.2, blast: FIREBALL_BLAST, blastHurtsAll: false };
-const METEOR: Shot = { damage: METEOR_DAMAGE, power: 3, blast: METEOR_BLAST, blastHurtsAll: true };
+const FIREBALL_SHOT: Shot = { damage: 1, power: 1.2, blast: FIREBALL_BLAST, blastDamage: 1, blastHurtsAll: false };
+const METEOR_SHOT: Shot = { damage: METEOR.damage, power: 3, blast: METEOR.blast, blastDamage: METEOR.blastDamage, blastHurtsAll: true };
 
 /** The dragon's fire: fireballs, meteors, and what they hit. */
 export class Combat {
   readonly fireballs: Projectiles;
   readonly meteors: Projectiles;
   private cooldown = 0;
+  private cooldownFactor = 1;
+  private jetClock = 0;
+  private readonly jetFlames = new EmissionRate(JET_FLAMES_PER_SECOND);
 
   constructor(
     private readonly effects: Effects,
@@ -52,17 +55,19 @@ export class Combat {
     this.meteors = new Projectiles(new SphereGeometry(7, 16, 12), new MeshBasicMaterial({ color: new Color(9, 4, 1.2) }), (p, v) => this.fireTrail(p, v, 3));
   }
 
-  reset(): void {
+  /** Starts a run; `cooldownFactor` below 1 fires faster (upgrade). */
+  reset(cooldownFactor = 1): void {
     this.fireballs.clear();
     this.meteors.clear();
     this.cooldown = 0;
+    this.cooldownFactor = cooldownFactor;
   }
 
   /** Regular fire breath; `triple` fans three fireballs out instead of one. Returns true when it fired. */
   tryFire(from: Vector3, target: Vector3, dt: number, wantsToFire: boolean, triple: boolean): boolean {
     this.cooldown -= dt;
     if (!wantsToFire || this.cooldown > 0) return false;
-    this.cooldown = FIREBALL_COOLDOWN;
+    this.cooldown = FIREBALL_COOLDOWN * this.cooldownFactor;
     const direction = target.clone().sub(from).normalize();
     for (const angle of triple ? [-TRIPLE_SPREAD, 0, TRIPLE_SPREAD] : [0]) {
       this.fireballs.spawn(from, direction.clone().applyAxisAngle(UP, angle).multiplyScalar(FIREBALL_SPEED), 3);
@@ -71,8 +76,35 @@ export class Combat {
     return true;
   }
 
+  /**
+   * A short jet of flame pours from the jaws while firing. It looks like real fire breath and
+   * burns fragile enemies (bat swarms) in a short cone in front of the mouth.
+   */
+  breathe(from: Vector3, target: Vector3, dt: number, events: CombatEvents): void {
+    const direction = target.clone().sub(from).normalize();
+    for (let i = this.jetFlames.count(dt); i > 0; i--) {
+      this.effects.fire.emit({
+        position: from,
+        velocity: direction.clone().multiplyScalar(220 + Math.random() * 60).add(randomDirection().multiplyScalar(26)),
+        life: 0.22 + Math.random() * 0.12,
+        size: 5,
+        endSize: 20,
+        color: JET_COLOR,
+        endColor: JET_END,
+        drag: 1.5,
+      });
+    }
+    this.jetClock -= dt;
+    if (this.jetClock > 0) return;
+    this.jetClock = FLAME_JET.tick;
+    for (const foe of this.foes.within(from, FLAME_JET.range)) {
+      const toFoe = foe.position.clone().sub(from).normalize();
+      if (foe.fragile && toFoe.dot(direction) > FLAME_JET.cosAngle) this.damageFoe(foe, 1, events);
+    }
+  }
+
   launchMeteor(from: Vector3, target: Vector3): void {
-    const velocity = target.clone().sub(from).normalize().multiplyScalar(METEOR_SPEED);
+    const velocity = target.clone().sub(from).normalize().multiplyScalar(METEOR.speed);
     this.meteors.spawn(from, velocity, 4);
     this.muzzleFlash(from, velocity, 40);
   }
@@ -80,8 +112,8 @@ export class Combat {
   update(dt: number, siege: boolean, events: CombatEvents): void {
     this.fireballs.update(dt);
     this.meteors.update(dt);
-    this.resolve(this.fireballs, FIREBALL, siege, events);
-    this.resolve(this.meteors, METEOR, siege, events);
+    this.resolve(this.fireballs, FIREBALL_SHOT, siege, events);
+    this.resolve(this.meteors, METEOR_SHOT, siege, events);
   }
 
   private resolve(projectiles: Projectiles, shot: Shot, siege: boolean, events: CombatEvents): void {
@@ -95,8 +127,7 @@ export class Combat {
   }
 
   /**
-   * Applies the hit, if any. Returns the size of the explosion to show (small on bats, so a swarm
-   * around the dragon's mouth does not flood the screen with fire), or null when nothing was hit.
+   * Applies the hit, if any. Returns the size of the explosion to show, or null when nothing was hit.
    */
   private strike(position: Vector3, shot: Shot, siege: boolean, events: CombatEvents): number | null {
     const part = siege ? this.castle.partAt(position) : undefined;
@@ -117,7 +148,6 @@ export class Combat {
     }
     const rock = this.rocks.find((r) => r.mesh.visible && r.mesh.position.distanceTo(position) < r.radius + 4);
     if (rock) {
-      rock.hit = true;
       rock.mesh.visible = false;
       return shot.power;
     }
@@ -126,16 +156,16 @@ export class Combat {
 
   private blast(position: Vector3, power: number, shot: Shot, events: CombatEvents): void {
     this.effects.explosion(position, power);
-    events.onExplosion(power);
+    events.onExplosion(power, position);
     for (const foe of this.foes.within(position, shot.blast)) {
-      if ((shot.blastHurtsAll || foe.fragile) && foe.canBeHurt()) this.damageFoe(foe, shot.blastHurtsAll ? 2 : 1, events);
+      if ((shot.blastHurtsAll || foe.fragile) && foe.canBeHurt()) this.damageFoe(foe, shot.blastDamage, events);
     }
   }
 
   private damageFoe(foe: Foe, damage: number, events: CombatEvents): void {
-    if (!foe.hit(damage)) return;
-    this.foes.kill(foe, this.effects);
-    events.onFoeKilled(foe);
+    const killed = foe.hit(damage);
+    events.onFoeHit(foe, killed);
+    if (killed) this.foes.kill(foe, this.effects);
   }
 
   private muzzleFlash(from: Vector3, velocity: Vector3, count: number): void {

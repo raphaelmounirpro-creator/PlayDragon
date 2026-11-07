@@ -12,6 +12,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 5173",
     "test": "vitest run",
+    "test:smoke": "npm run build && node tests/smoke/launch.cjs",
     "start:desktop": "npm run build && electron .",
     "dist": "npm run build && electron-builder --win --publish never"
   },

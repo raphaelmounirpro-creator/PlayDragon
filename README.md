@@ -43,17 +43,37 @@ Tu préfères ne rien installer ? Prends la **version portable** (`PlayDragon.ex
 |---|---|---|
 | **Z Q S D** ou flèches | Stick gauche / croix | Diriger le dragon |
 | Souris | Stick droit | Viser |
-| **Clic** ou **Espace** | **RT** | Cracher une boule de feu |
+| **Clic** ou **Espace** | **RT** | Cracher le feu : boules de feu et jet de flammes qui brûle les chauves-souris |
 | **E** (ou Maj) / **A** | **RB** / **LT** | Accélérer / freiner |
 | **1 2 3 4** ou boutons en bas à gauche | **X Y B LB** | Pouvoirs spéciaux, payés avec tes points |
-| **Entrée** | **A** | Valider (menus) |
+| **Entrée** | **A** | Valider (menus), passer l'introduction |
 | **Échap** | **Start** | Pause |
 | **M** | | Couper / remettre le son |
 | **F11** | | Plein écran |
 
+Toutes les touches du clavier se changent dans **Options**. À ta première partie, des conseils
+apparaissent au bon moment (diriger, tirer, anneaux, vitesse, pouvoirs, siège) ; tu peux les revoir
+depuis Options.
+
+### Aides en vol
+
+- **Aide à la visée :** un tir qui passe tout près d'un ennemi est dévié vers lui, en anticipant sa
+  trajectoire. Elle est un peu plus généreuse à la manette. Tu peux la couper dans Options.
+- **Flèches de menace :** au bord de l'écran, elles montrent les ennemis hors de vue (une wyverne
+  derrière toi, le boss) et les projectiles qui arrivent.
+- **Retour des touches :** le viseur s'allume quand un tir touche, un ennemi touché devient blanc un
+  instant, et la caméra tremble aux grosses explosions, aux charges des boss et quand tu es touché.
+
+### Options
+
+Volume de la musique et des effets, qualité graphique (Basse pour les PC modestes), aide à la visée,
+sensibilité du stick de visée, inversion haut/bas à la manette, touches du clavier. Tes choix sont
+mémorisés, comme la difficulté, le dernier niveau choisi et le son coupé.
+
 ### Niveaux et difficulté
 
-Choisis le niveau et la difficulté dans le menu. Gagner un niveau débloque le suivant.
+Choisis le niveau et la difficulté dans le menu. Gagner un niveau débloque le suivant. Chaque niveau
+s'ouvre sur un survol du château qui t'attend (Entrée, Espace ou clic pour passer).
 
 | Niveau | Ambiance | Château |
 |---|---|---|
@@ -69,8 +89,8 @@ difficulté.
 
 1. **Le voyage** (environ 1 minute) : le dragon suit la rivière. Chaque anneau traversé rapporte
    100 points. Les rochers enlèvent 20 points de vie ; tu peux aussi les détruire en tirant dessus.
-2. **Le Gardien de pierre** barre la route avant le château : le voyage s'arrête tant qu'il n'est pas
-   vaincu. Esquive ses rochers et sa charge (il se met à trembler juste avant).
+2. **Le boss du niveau** barre la route avant le château : le voyage s'arrête tant qu'il n'est pas
+   vaincu. Chaque niveau a le sien (voir ci-dessous) ; tous préviennent avant leur attaque la plus forte.
 3. **Le siège** : le château apparaît. **Q / D** pour en faire le tour (le dragon reste face à lui),
    **Z / S** pour monter ou descendre. Chaque tour ou donjon détruit rapporte 500 points.
 4. **La victoire :** quand tout est détruit, les remparts s'effondrent.
@@ -83,7 +103,9 @@ difficulté.
 | Gargouille cracheuse | Voyage | Garde ses distances devant toi et crache des pierres | 200 |
 | Chauves-souris | Voyage | Essaim qui tourne autour de toi, gêne la vue et mord. Une flamme suffit, une explosion en tue plusieurs | 25 |
 | Wyverne | Voyage | Arrive par-derrière et mord, puis te double et vole devant toi : c'est le moment de la brûler | 300 |
-| Gardien de pierre | Fin du voyage | Mini-boss avec barre de vie : rochers et charge | 2000 |
+| Gardien de pierre | Boss du niveau 1 | Lance des rochers, puis tremble et charge | 2000 |
+| La Reine des nuées | Boss du niveau 2 | Ondes sonores en éventail, appelle des essaims de chauves-souris, plonge sur toi après un cri | 2500 |
+| Ignar, le dragon rival | Boss du niveau 3 | Salves de flammes, souffle qui balaie ta route (va à contresens pour l'esquiver), passe en rase-mottes | 3000 |
 | Arbalétriers | Remparts | Tirent des carreaux enflammés | 100 |
 | Mage | Donjon | Protège le donjon d'un dôme magique tant qu'une tour tient, et lance des orbes qui te suivent | 400 |
 | Tours | Château | Tirent des éclairs bleus | 500 |
@@ -92,12 +114,24 @@ difficulté.
 
 Tes points sont aussi ta monnaie. Chaque pouvoir a un temps de recharge.
 
-| Touche | Pouvoir | Coût | Effet |
+| Touche (par défaut) | Pouvoir | Coût | Effet |
 |---|---|---|---|
 | 1 | Triple feu | 300 | Pendant 8 s, chaque tir part en éventail de 3 boules de feu |
 | 2 | Bouclier | 400 | Invulnérable pendant 6 s |
 | 3 | Soin | 300 | Rend 40 points de vie |
 | 4 | Météore | 600 | Une énorme boule de feu qui inflige 4 dégâts au château |
+
+### Trésor et améliorations
+
+Chaque partie remplit ton trésor : 1 pièce d'or pour 10 points, et 50 % de plus en cas de victoire. Dans
+**Améliorations** (menu principal), l'or achète des améliorations permanentes, chacune en 3 rangs :
+
+| Amélioration | Effet par rang | Prix des rangs |
+|---|---|---|
+| Cœur ardent | +20 points de vie | 200, 450, 800 |
+| Souffle rapide | Feu 12 % plus rapide | 200, 450, 800 |
+| Écailles d'acier | 10 % de dégâts en moins | 250, 550, 950 |
+| Maîtrise des pouvoirs | Pouvoirs 15 % moins chers | 200, 450, 800 |
 
 ## Développer
 
@@ -106,9 +140,15 @@ Il faut Node.js 20 ou plus récent.
 ```bash
 npm install
 npm run dev          # http://localhost:5173
-npm test             # tests unitaires
+npm test             # tests unitaires (règles, ennemis, directeur, tirs ennemis…)
+npm run test:smoke   # test de non-régression : joue le jeu construit et vérifie qu'il fonctionne
 npm run dist         # produit release/PlayDragon-Setup.exe (installeur) et release/PlayDragon.exe (portable)
 ```
+
+`npm run test:smoke` ouvre une fenêtre et joue une partie comme un joueur, sans toucher à tes scores :
+menus, Options, Améliorations, introduction, 20 secondes de vol en tirant, pause. Il vérifie les points
+marqués, le nombre d'images par seconde (30 au moins) et l'absence d'erreur, puis range ses captures
+d'écran et son rapport dans `test-results/smoke/`.
 
 Les règles du projet, son architecture et les pièges d'installation sont décrits dans
 [AGENTS.md](AGENTS.md).

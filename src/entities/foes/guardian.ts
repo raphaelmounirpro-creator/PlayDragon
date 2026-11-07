@@ -1,31 +1,27 @@
 import { Color, Vector3 } from 'three';
-import { GUARDIAN_CHARGE_DAMAGE, GUARDIAN_SCORE } from '../../config';
+import { GUARDIAN } from '../../config';
 import type { Effects } from '../../fx/particles';
 import { Foe, FoeContext } from './foe';
-import { createGargoyleModel, flapGargoyle, GargoyleLook } from './gargoyleModel';
+import { GargoyleLook, GargoyleModel } from './gargoyleModel';
 
 type Mode = 'arrive' | 'hold' | 'windup' | 'charge' | 'return';
 
-const LOOK: GargoyleLook = { skin: '#5d5751', membrane: '#3a3330', eyes: new Color(7, 2.4, 0.4), size: 8.5, ember: 0.25 };
-const HOLD_DISTANCE = 230;
-const BOULDER_RELOAD = 3.4;
-const CHARGE_EVERY = 9;
-const WINDUP = 1.1;
-const CHARGE_SPEED = 330;
+const LOOK: GargoyleLook = { skin: '#5d5751', membrane: '#8a7a70', eyes: new Color(7, 2.4, 0.4), size: 8.5, ember: 0.25 };
 const WORLD_UP = new Vector3(0, 1, 0);
 
 /**
- * Mini-boss: a giant stone gargoyle that bars the way before the castle. It throws boulders
- * and, after a visible wind-up, charges at where the dragon was: move aside to dodge.
+ * Boss of the first level: a giant stone gargoyle that bars the way before the castle. It throws
+ * boulders and, after a visible wind-up (it trembles), charges at where the dragon was.
  */
 export class Guardian extends Foe {
   readonly radius = 36;
-  readonly score = GUARDIAN_SCORE;
+  readonly score = GUARDIAN.score;
   override readonly bossName = 'Gardien de pierre';
-  private readonly model = createGargoyleModel(LOOK);
+  override readonly indicator = 'boss';
+  private readonly model = new GargoyleModel(LOOK);
   private mode: Mode = 'arrive';
   private timer = 0;
-  private reload = BOULDER_RELOAD;
+  private reload = GUARDIAN.boulderReload;
   private chargeClock = 0;
   private readonly chargeTarget = new Vector3();
   private chargeHit = false;
@@ -38,7 +34,8 @@ export class Guardian extends Foe {
 
   update(dt: number, ctx: FoeContext): void {
     this.timer += dt;
-    flapGargoyle(this.model, Math.sin(ctx.time * (this.mode === 'charge' ? 9 : 3.2)) * 0.7);
+    const beat = this.mode === 'charge' ? 9 : 3.2;
+    this.model.pose(Math.sin(ctx.time * beat) * 0.6 + 0.1, this.mode === 'charge' ? 0.6 : 0);
     switch (this.mode) {
       case 'arrive':
       case 'return':
@@ -51,7 +48,7 @@ export class Guardian extends Foe {
         break;
       case 'windup':
         this.position.x += Math.sin(this.timer * 70) * 0.8;
-        if (this.timer > WINDUP) {
+        if (this.timer > GUARDIAN.windup) {
           this.chargeTarget.copy(ctx.dragon);
           this.chargeHit = false;
           this.switchTo('charge');
@@ -75,7 +72,7 @@ export class Guardian extends Foe {
     const right = new Vector3().crossVectors(ctx.heading, WORLD_UP).normalize();
     return ctx.dragon
       .clone()
-      .addScaledVector(ctx.heading, HOLD_DISTANCE)
+      .addScaledVector(ctx.heading, GUARDIAN.holdDistance)
       .addScaledVector(right, Math.sin(ctx.time * 0.7) * 90)
       .addScaledVector(WORLD_UP, -20 + Math.sin(ctx.time * 1.1) * 20);
   }
@@ -84,20 +81,22 @@ export class Guardian extends Foe {
     this.reload -= dt * ctx.difficulty.enemyFireRate;
     this.chargeClock += dt * ctx.difficulty.enemyFireRate;
     if (this.reload <= 0) {
-      this.reload = BOULDER_RELOAD;
+      this.reload = GUARDIAN.boulderReload;
+      this.object.updateMatrixWorld();
       ctx.fire('boulder', this.object.localToWorld(this.model.mouth.clone()), ctx.dragon);
       ctx.cue('spit');
     }
-    if (this.chargeClock > CHARGE_EVERY) {
+    if (this.chargeClock > GUARDIAN.chargeEvery) {
       this.chargeClock = 0;
       this.switchTo('windup');
       ctx.cue('roar');
+      ctx.shake(0.3);
     }
   }
 
   private charge(dt: number, ctx: FoeContext): void {
     const toTarget = this.chargeTarget.clone().sub(this.position);
-    const step = CHARGE_SPEED * dt;
+    const step = GUARDIAN.chargeSpeed * dt;
     if (toTarget.length() <= step || this.timer > 2) {
       this.switchTo('return');
       return;
@@ -105,7 +104,7 @@ export class Guardian extends Foe {
     this.position.addScaledVector(toTarget.normalize(), step);
     if (!this.chargeHit && this.position.distanceTo(ctx.dragon) < this.radius + 6) {
       this.chargeHit = true;
-      ctx.hurtDragon(GUARDIAN_CHARGE_DAMAGE);
+      ctx.hurtDragon(GUARDIAN.chargeDamage);
     }
   }
 

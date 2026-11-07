@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   BufferGeometry,
   Color,
   ConeGeometry,
@@ -8,11 +9,12 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   SphereGeometry,
+  TorusGeometry,
   Vector3,
 } from 'three';
-import { BOLT_DAMAGE, BOULDER_DAMAGE, ORB_DAMAGE, QUARREL_DAMAGE, STONE_DAMAGE } from '../config';
-import { Projectiles } from '../entities/projectiles';
+import { DRAGON_HITBOX, ENEMY_LEAD, HOSTILE } from '../config';
 import type { HostileKind } from '../entities/foes/foe';
+import { Projectiles } from '../entities/projectiles';
 import { Effects, randomDirection } from '../fx/particles';
 
 interface KindSpec {
@@ -22,13 +24,13 @@ interface KindSpec {
   life: number;
   /** How quickly it steers toward the dragon (0 = straight line). */
   homing: number;
+  /** How fast it grows (sound waves widen as they travel). */
+  growth: number;
   geometry: BufferGeometry;
   material: Material;
   orient: boolean;
   trail: (effects: Effects, position: Vector3) => void;
 }
-
-const DRAGON_HIT_RADIUS = 9;
 
 function sparks(color: Color, size: number, spread: number) {
   return (effects: Effects, position: Vector3) =>
@@ -43,14 +45,29 @@ function dust(size: number) {
   };
 }
 
+const quiet = () => undefined;
+
 function specs(): Record<HostileKind, KindSpec> {
   const stone = new MeshStandardMaterial({ color: '#6a5a4a', roughness: 1, flatShading: true });
+  const base = { homing: 0, growth: 0, orient: false };
   return {
-    bolt: { speed: 240, damage: BOLT_DAMAGE, radius: 2, life: 5, homing: 0, geometry: new SphereGeometry(1.8, 12, 10), material: new MeshBasicMaterial({ color: new Color(1.6, 2.6, 6) }), orient: false, trail: sparks(new Color(0.8, 1.4, 4), 6, 3) },
-    stone: { speed: 200, damage: STONE_DAMAGE, radius: 2, life: 5, homing: 0, geometry: new DodecahedronGeometry(1.6), material: stone, orient: false, trail: dust(3) },
-    boulder: { speed: 150, damage: BOULDER_DAMAGE, radius: 5, life: 6, homing: 0, geometry: new DodecahedronGeometry(4.5), material: stone, orient: false, trail: dust(8) },
-    quarrel: { speed: 330, damage: QUARREL_DAMAGE, radius: 1.5, life: 4, homing: 0, geometry: new ConeGeometry(0.25, 3.4, 5), material: new MeshStandardMaterial({ color: '#2e2016', emissive: '#ff6a2a', emissiveIntensity: 0.4 }), orient: true, trail: sparks(new Color(2.4, 0.9, 0.3), 2.5, 2) },
-    orb: { speed: 120, damage: ORB_DAMAGE, radius: 2, life: 7, homing: 1.6, geometry: new SphereGeometry(1.7, 12, 10), material: new MeshBasicMaterial({ color: new Color(3, 0.6, 2.2) }), orient: false, trail: sparks(new Color(1.6, 0.35, 1.1), 7, 4) },
+    bolt: { ...base, ...HOSTILE.bolt, radius: 2, life: 5, geometry: new SphereGeometry(1.8, 12, 10), material: new MeshBasicMaterial({ color: new Color(1.6, 2.6, 6) }), trail: sparks(new Color(0.8, 1.4, 4), 6, 3) },
+    stone: { ...base, ...HOSTILE.stone, radius: 2, life: 5, geometry: new DodecahedronGeometry(1.6), material: stone, trail: dust(3) },
+    boulder: { ...base, ...HOSTILE.boulder, radius: 5, life: 6, geometry: new DodecahedronGeometry(4.5), material: stone, trail: dust(8) },
+    quarrel: { ...base, ...HOSTILE.quarrel, radius: 1.5, life: 4, orient: true, geometry: new ConeGeometry(0.25, 3.4, 5), material: new MeshStandardMaterial({ color: '#2e2016', emissive: '#ff6a2a', emissiveIntensity: 0.4 }), trail: sparks(new Color(2.4, 0.9, 0.3), 2.5, 2) },
+    orb: { ...base, ...HOSTILE.orb, radius: 2, life: 7, geometry: new SphereGeometry(1.7, 12, 10), material: new MeshBasicMaterial({ color: new Color(3, 0.6, 2.2) }), trail: sparks(new Color(1.6, 0.35, 1.1), 7, 4) },
+    wave: {
+      ...base,
+      ...HOSTILE.wave,
+      radius: 4,
+      life: 4,
+      growth: 0.9,
+      orient: true,
+      geometry: new TorusGeometry(4, 0.5, 8, 32).rotateX(Math.PI / 2),
+      material: new MeshBasicMaterial({ color: new Color(1.8, 0.6, 1.6), transparent: true, opacity: 0.75, blending: AdditiveBlending, depthWrite: false }),
+      trail: quiet,
+    },
+    flame: { ...base, ...HOSTILE.flame, radius: 2.2, life: 4, geometry: new SphereGeometry(2.2, 12, 10), material: new MeshBasicMaterial({ color: new Color(6, 1.8, 0.5) }), trail: sparks(new Color(3, 0.9, 0.25), 8, 6) },
   };
 }
 
@@ -71,11 +88,11 @@ export class HostileFire {
     this.pools = Object.fromEntries(entries) as Record<HostileKind, Projectiles>;
   }
 
-  /** Fires at where the target will be, leading a moving target. */
+  /** Fires toward where the target is heading (partially: a change of course dodges it). */
   fire(kind: HostileKind, from: Vector3, target: Vector3, targetVelocity: Vector3): void {
     const spec = this.kinds[kind];
     const travel = target.distanceTo(from) / spec.speed;
-    const aim = target.clone().addScaledVector(targetVelocity, travel * 0.85);
+    const aim = target.clone().addScaledVector(targetVelocity, travel * ENEMY_LEAD);
     this.pools[kind].spawn(from, aim.sub(from).normalize().multiplyScalar(spec.speed), spec.life);
   }
 
@@ -84,16 +101,14 @@ export class HostileFire {
     for (const kind of Object.keys(this.pools) as HostileKind[]) {
       const spec = this.kinds[kind];
       const pool = this.pools[kind];
-      if (spec.homing > 0) {
-        for (const item of pool.items) {
-          const toward = dragon.clone().sub(item.mesh.position).normalize().multiplyScalar(spec.speed);
-          item.velocity.lerp(toward, Math.min(1, spec.homing * dt));
-        }
+      for (const item of pool.items) {
+        if (spec.homing > 0) item.velocity.lerp(dragon.clone().sub(item.mesh.position).normalize().multiplyScalar(spec.speed), Math.min(1, spec.homing * dt));
+        if (spec.growth > 0) item.mesh.scale.setScalar(1 + (spec.life - item.life) * spec.growth);
       }
       pool.update(dt);
       for (const item of [...pool.items]) {
         const position = item.mesh.position;
-        if (position.distanceTo(dragon) < DRAGON_HIT_RADIUS + spec.radius) {
+        if (position.distanceTo(dragon) < DRAGON_HITBOX.projectile + spec.radius * item.mesh.scale.x) {
           hurt(spec.damage);
           this.effects.explosion(position, 0.7);
           pool.remove(item);
@@ -103,6 +118,18 @@ export class HostileFire {
         }
       }
     }
+  }
+
+  /** Projectiles closer than `range` and still coming toward the dragon (for the edge warnings). */
+  incoming(dragon: Vector3, range: number): Vector3[] {
+    const threats: Vector3[] = [];
+    for (const pool of Object.values(this.pools)) {
+      for (const item of pool.items) {
+        const toDragon = dragon.clone().sub(item.mesh.position);
+        if (toDragon.length() < range && toDragon.dot(item.velocity) > 0) threats.push(item.mesh.position);
+      }
+    }
+    return threats;
   }
 
   clear(): void {

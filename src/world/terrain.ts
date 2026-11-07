@@ -23,7 +23,7 @@ export function createTerrain(land: Landscape, style: TerrainStyle): Mesh {
     return color;
   };
 
-  const geometry = new PlaneGeometry(WIDTH, DEPTH, 320, 620);
+  const geometry = new PlaneGeometry(WIDTH, DEPTH, 420, 820);
   geometry.rotateX(-Math.PI / 2);
   geometry.translate(0, 0, CENTER_Z);
   const positions = geometry.attributes.position as BufferAttribute;

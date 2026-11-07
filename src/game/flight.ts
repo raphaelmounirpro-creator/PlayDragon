@@ -24,6 +24,9 @@ const MENU_DISTANCE = 52;
 const MENU_HEIGHT = 9;
 const MENU_FRAMING = 16;
 const BOOST_FOV = 12;
+/** Camera shake: how far (units) the camera jolts at full trauma, and how fast trauma fades. */
+const SHAKE_DISTANCE = 5;
+const SHAKE_DECAY = 1.6;
 const PITCH_SPEED_SCALE = 90;
 
 interface Orbit {
@@ -38,14 +41,18 @@ export class FlightController {
   readonly forward = new Vector3(0, 0, -1);
   private distance = 0;
   private readonly offset = new Vector2();
+  /** The dragon's velocity in the world, in units/s (enemies lead their shots with it). */
+  readonly velocity = new Vector3();
   /** Lateral (x) and vertical (y) speed of the dragon relative to its route, in units/s. */
-  private readonly velocity = new Vector2();
+  private readonly steering = new Vector2();
+  private readonly previousPosition = new Vector3();
   private orbit: Orbit | null = null;
   private previousY = 0;
   /** Current speed relative to cruise speed (BRAKE_FACTOR to BOOST_FACTOR). */
   speedFactor = 1;
   /** While true the dragon stops advancing along the route (a boss bars the way); it can still steer. */
   hold = false;
+  private trauma = 0;
   private bank = 0;
   private pitch = 0;
   private time = 0;
@@ -65,9 +72,11 @@ export class FlightController {
   reset(): void {
     this.distance = 0;
     this.offset.set(0, 0);
-    this.velocity.set(0, 0);
+    this.steering.set(0, 0);
+    this.velocity.set(0, 0, 0);
     this.orbit = null;
     this.speedFactor = 1;
+    this.trauma = 0;
     this.previousY = this.curve.getPointAt(0).y;
     this.bank = 0;
     this.pitch = 0;
@@ -90,14 +99,15 @@ export class FlightController {
   /** `throttle`: -1 brakes, 0 cruises, 1 accelerates. */
   update(dt: number, steerX: number, steerY: number, throttle: number, mode: FlightMode): void {
     this.time += dt;
+    this.previousPosition.copy(this.position);
     const speedTarget = throttle > 0 ? BOOST_FACTOR : throttle < 0 ? BRAKE_FACTOR : 1;
     this.speedFactor = MathUtils.damp(this.speedFactor, speedTarget, 3, dt);
     const atCastle = mode === 'siege' || (mode === 'end' && this.reachedCastle());
 
     // Inertia: input sets a target velocity that the dragon reaches progressively.
     const lateralSpeed = atCastle ? ORBIT_SPEED * this.speedFactor : STEER_SPEED;
-    this.velocity.x = MathUtils.damp(this.velocity.x, steerX * lateralSpeed, STEER_RESPONSE, dt);
-    this.velocity.y = MathUtils.damp(this.velocity.y, steerY * VERTICAL_SPEED, STEER_RESPONSE, dt);
+    this.steering.x = MathUtils.damp(this.steering.x, steerX * lateralSpeed, STEER_RESPONSE, dt);
+    this.steering.y = MathUtils.damp(this.steering.y, steerY * VERTICAL_SPEED, STEER_RESPONSE, dt);
 
     if (atCastle) {
       this.circleCastle(dt);
@@ -107,12 +117,13 @@ export class FlightController {
     // Gentle wandering so the dragon never looks rail-mounted.
     this.position.y += Math.sin(this.time * 0.9) * 2.5;
     this.position.y = Math.max(this.position.y, this.land.terrainHeight(this.position.x, this.position.z) + MIN_GROUND_CLEARANCE);
+    if (dt > 0) this.velocity.subVectors(this.position, this.previousPosition).divideScalar(dt);
 
     // Nose follows the actual climb or dive: body tilts down when descending, up when climbing.
     const verticalSpeed = dt > 0 ? (this.position.y - this.previousY) / dt : 0;
     this.previousY = this.position.y;
     const pitchTarget = MathUtils.clamp(verticalSpeed / PITCH_SPEED_SCALE, -MAX_PITCH, MAX_PITCH);
-    const turn = MathUtils.clamp(this.velocity.x / STEER_SPEED, -1, 1);
+    const turn = MathUtils.clamp(this.steering.x / STEER_SPEED, -1, 1);
     this.bank = MathUtils.damp(this.bank, -turn * MAX_BANK, 4, dt);
     this.pitch = MathUtils.damp(this.pitch, pitchTarget, 5, dt);
     this.orientDragon();
@@ -133,7 +144,7 @@ export class FlightController {
     const frame = frameAt(this.curve, this.distance);
     this.position.copy(frame.point).addScaledVector(frame.right, this.offset.x).addScaledVector(frame.up, this.offset.y);
     // The nose points where the dragon is actually going, not just along the river.
-    const sideways = this.velocity.x / (FLIGHT_SPEED * this.speedFactor);
+    const sideways = this.steering.x / (FLIGHT_SPEED * this.speedFactor);
     this.forward.copy(frame.tangent).addScaledVector(frame.right, sideways * 0.6).normalize();
   }
 
@@ -149,7 +160,7 @@ export class FlightController {
     }
     const orbit = this.orbit;
     // Moving toward the dragon's right (facing the castle) decreases the angle.
-    orbit.angle -= (this.velocity.x * dt) / orbit.radius;
+    orbit.angle -= (this.steering.x * dt) / orbit.radius;
     orbit.height = this.moveWithin(orbit.height - center.y, 'y', dt, ORBIT_MAX_HEIGHT, ORBIT_MIN_HEIGHT) + center.y;
     this.position.set(center.x + Math.cos(orbit.angle) * orbit.radius, orbit.height, center.z + Math.sin(orbit.angle) * orbit.radius);
     this.forward.copy(center).sub(this.position).setY(0).normalize();
@@ -157,8 +168,8 @@ export class FlightController {
 
   /** Advances one axis by the current velocity, stopping (and killing that velocity) at the limits. */
   private moveWithin(value: number, axis: 'x' | 'y', dt: number, max: number, min = -max): number {
-    const next = value + this.velocity[axis] * dt;
-    if (next > max || next < min) this.velocity[axis] = 0;
+    const next = value + this.steering[axis] * dt;
+    if (next > max || next < min) this.steering[axis] = 0;
     return MathUtils.clamp(next, min, max);
   }
 
@@ -201,7 +212,20 @@ export class FlightController {
     this.camera.position.lerp(target, dt === 0 ? 1 : smoothing);
     // Wider field of view at high speed sells the acceleration.
     this.camera.fov = BASE_FOV + (this.speedFactor - 1) * BOOST_FOV;
+    this.applyShake(dt);
     this.camera.updateProjectionMatrix();
     this.camera.lookAt(lookAt);
+  }
+
+  /** Jolts the camera (0 to 1, adds up): impacts, explosions, a boss charging past. */
+  shake(amount: number): void {
+    this.trauma = Math.min(1, this.trauma + amount);
+  }
+
+  /** Trauma squared gives a punchy start and a soft end. */
+  private applyShake(dt: number): void {
+    this.trauma = Math.max(0, this.trauma - SHAKE_DECAY * dt);
+    const jolt = this.trauma * this.trauma * SHAKE_DISTANCE;
+    if (jolt > 0) this.camera.position.add(new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(jolt * 2));
   }
 }

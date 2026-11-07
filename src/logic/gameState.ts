@@ -3,6 +3,14 @@ import { Difficulty, NORMAL } from './difficulty';
 
 export type Phase = 'menu' | 'voyage' | 'siege' | 'victory' | 'defeat';
 
+/** What permanent upgrades change for a run (see logic/progression.ts). */
+export interface RunUpgrades {
+  maxHp: number;
+  damageTaken: number;
+}
+
+const NO_UPGRADES: RunUpgrades = { maxHp: DRAGON_MAX_HP, damageTaken: 1 };
+
 export interface PartDefinition {
   id: string;
   hp: number;
@@ -11,10 +19,13 @@ export interface PartDefinition {
 /** Pure game rules: phases, health, score and castle damage. No rendering here. */
 export class GameState {
   phase: Phase = 'menu';
+  maxHp = DRAGON_MAX_HP;
   dragonHp = DRAGON_MAX_HP;
   score = 0;
   elapsed = 0;
   difficulty: Difficulty = NORMAL;
+  /** Damage multiplier from the difficulty and the dragon's upgraded scales. */
+  private damageFactor = 1;
   private readonly partHp = new Map<string, number>();
   private readonly partMaxHp = new Map<string, number>();
   private shieldedPart: string | null = null;
@@ -30,10 +41,13 @@ export class GameState {
     this.shieldedPart = shieldedPart;
   }
 
-  start(difficulty: Difficulty = NORMAL): void {
+  /** Starts a run; upgrades may raise the dragon's health and harden its scales. */
+  start(difficulty: Difficulty = NORMAL, upgrades: RunUpgrades = NO_UPGRADES): void {
     this.phase = 'voyage';
     this.difficulty = difficulty;
-    this.dragonHp = DRAGON_MAX_HP;
+    this.maxHp = upgrades.maxHp;
+    this.dragonHp = upgrades.maxHp;
+    this.damageFactor = difficulty.damageTaken * upgrades.damageTaken;
     this.score = 0;
     this.elapsed = 0;
     for (const [id, max] of this.partMaxHp) this.partHp.set(id, max);
@@ -63,15 +77,15 @@ export class GameState {
     if (this.isPlaying()) this.score += points;
   }
 
-  /** Damage is scaled by the difficulty. */
+  /** Damage is scaled by the difficulty and the upgraded scales. */
   damageDragon(amount: number): void {
     if (!this.isPlaying()) return;
-    this.dragonHp = Math.max(0, this.dragonHp - amount * this.difficulty.damageTaken);
+    this.dragonHp = Math.max(0, this.dragonHp - amount * this.damageFactor);
     if (this.dragonHp === 0) this.phase = 'defeat';
   }
 
   heal(amount: number): void {
-    if (this.isPlaying()) this.dragonHp = Math.min(DRAGON_MAX_HP, this.dragonHp + amount);
+    if (this.isPlaying()) this.dragonHp = Math.min(this.maxHp, this.dragonHp + amount);
   }
 
   /** False for the shielded part while another part still stands. */

@@ -40,11 +40,11 @@ describe.each(LEVELS.map((level) => [level.name, new Landscape(level.terrain)] a
 });
 
 describe('levels', () => {
-  it('end every journey with the stone guardian, after the other events', () => {
+  it('end every journey with its boss, after the other events', () => {
     for (const level of LEVELS) {
       const ats = level.events.map((e) => e.at);
       expect([...ats].sort((a, b) => a - b)).toEqual(ats);
-      expect(level.events[level.events.length - 1].type).toBe('guardian');
+      expect(level.events[level.events.length - 1].type).toBe('boss');
     }
   });
 });

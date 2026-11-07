@@ -1,11 +1,6 @@
 import type { Difficulty } from '../logic/difficulty';
 import type { LevelDefinition } from '../world/levels';
-
-function element<T extends HTMLElement>(id: string): T {
-  const found = document.getElementById(id);
-  if (!found) throw new Error(`Missing element #${id}`);
-  return found as T;
-}
+import { element } from './dom';
 
 export interface MenuActions {
   chooseLevel(index: number): void;
@@ -13,6 +8,8 @@ export interface MenuActions {
   start(): void;
   next(): void;
   backToMenu(): void;
+  openShop(): void;
+  openOptions(): void;
 }
 
 export interface MenuChoices {
@@ -20,6 +17,7 @@ export interface MenuChoices {
   unlocked: number;
   difficulty: Difficulty;
   best: number;
+  gold: number;
 }
 
 export interface RunResult {
@@ -30,6 +28,8 @@ export interface RunResult {
   newBest: boolean;
   /** A next level exists and is now unlocked. */
   hasNext: boolean;
+  /** Gold earned by this run. */
+  gold: number;
 }
 
 /** Title screen (level and difficulty choice, best score) and end-of-run screen. */
@@ -48,6 +48,8 @@ export class Menu {
     this.restart.addEventListener('click', () => actions.start());
     this.next.addEventListener('click', () => actions.next());
     element('to-menu').addEventListener('click', () => actions.backToMenu());
+    element('open-shop').addEventListener('click', () => actions.openShop());
+    element('open-options').addEventListener('click', () => actions.openOptions());
   }
 
   isOpen(): boolean {
@@ -61,6 +63,7 @@ export class Menu {
     this.renderChips('level-choices', this.levels.map((level, i) => ({ label: `${i + 1}. ${level.name}`, locked: i >= choices.unlocked, selected: i === choices.level })), (i) => this.actions.chooseLevel(i));
     this.renderChips('difficulty-choices', this.difficulties.map((d) => ({ label: d.label, locked: false, selected: d.id === choices.difficulty.id })), (i) => this.actions.chooseDifficulty(this.difficulties[i]));
     element('best-score').textContent = choices.best > 0 ? `Meilleur score : ${choices.best} points` : 'Pas encore de score dans ce niveau';
+    element('treasure').textContent = `Trésor : ${choices.gold} pièces d'or`;
   }
 
   hide(): void {
@@ -76,6 +79,7 @@ export class Menu {
       : `Les défenses ont eu raison de toi. ${result.score} points.`;
     element('end-record').textContent = result.newBest ? 'Nouveau record !' : `Meilleur score : ${result.best} points`;
     element('end-record').classList.toggle('is-new', result.newBest);
+    element('end-gold').textContent = `+${result.gold} pièces d'or pour ton trésor`;
     this.next.classList.toggle('hidden', !result.hasNext);
     this.restart.classList.toggle('cta--ghost', result.hasNext);
     this.menu.classList.add('hidden');

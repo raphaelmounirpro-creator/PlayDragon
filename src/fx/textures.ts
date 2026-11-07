@@ -201,9 +201,10 @@ function distanceToSegment(x: number, z: number, [x1, z1, x2, z2]: WingBone2D): 
 /**
  * Leathery wing membrane painted from the wing's own bones: thick and dark along the
  * fingers, thinner and warmer in the middle of each panel (where the sun shines through),
- * with dark veins and glints of ember light. `toRest` maps texture (u, v) to rest (x, z).
+ * with dark veins and glints of ember light. `toRest` maps texture (u, v) to rest (x, z);
+ * `scale` is the wing size relative to the dragon's (smaller wings, thinner bone shadows).
  */
-export function createMembraneTexture(bones: WingBone2D[], toRest: (u: number, v: number) => [number, number]): Texture {
+export function createMembraneTexture(bones: WingBone2D[], toRest: (u: number, v: number) => [number, number], scale = 1): Texture {
   const size = 512;
   const [canvas, context] = createCanvas(size, size);
   const random = createRandom(7);
@@ -214,7 +215,7 @@ export function createMembraneTexture(bones: WingBone2D[], toRest: (u: number, v
       const [x, z] = toRest(px / size, 1 - py / size);
       let distance = Infinity;
       for (const bone of bones) distance = Math.min(distance, distanceToSegment(x, z, bone));
-      const panel = smoothstep(0.6, 6, distance) * (0.85 + 0.15 * valueNoise(x * 0.4, z * 0.4));
+      const panel = smoothstep(0.6 * scale, 6 * scale, distance) * (0.85 + 0.15 * valueNoise((x * 0.4) / scale, (z * 0.4) / scale));
       const index = (py * size + px) * 4;
       image.data[index] = 24 + 136 * panel;
       image.data[index + 1] = 12 + 88 * panel;

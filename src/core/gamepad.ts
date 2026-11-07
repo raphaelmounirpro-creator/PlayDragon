@@ -19,6 +19,11 @@ export class Gamepad {
     this.axes = pad ? pad.axes.map((value) => (Math.abs(value) < DEADZONE ? 0 : value)) : [];
   }
 
+  /** Any stick pushed or button held this frame. */
+  active(): boolean {
+    return this.axes.some((value) => value !== 0) || this.buttons.some(Boolean);
+  }
+
   held(button: number): boolean {
     return this.buttons[button] ?? false;
   }

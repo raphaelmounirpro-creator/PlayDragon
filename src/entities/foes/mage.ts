@@ -11,13 +11,12 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
-import { MAGE_SCORE } from '../../config';
+import { MAGE } from '../../config';
 import type { Effects } from '../../fx/particles';
 import { randomDirection } from '../../fx/particles';
 import type { Post } from '../../world/castle';
 import { Foe, FoeContext } from './foe';
 
-const CAST_EVERY = 5;
 const ARCANE = new Color(1.6, 0.35, 1.1);
 
 const domeShader = {
@@ -54,12 +53,12 @@ const domeShader = {
  */
 export class Mage extends Foe {
   readonly radius = 8;
-  readonly score = MAGE_SCORE;
+  readonly score = MAGE.score;
   private readonly dome: Mesh;
   private readonly domeMaterial: ShaderMaterial;
   private readonly orb: Mesh;
   private readonly figure = new Group();
-  private reload = CAST_EVERY;
+  private reload = MAGE.castEvery;
   private active = false;
   private domeUp = true;
 
@@ -68,7 +67,7 @@ export class Mage extends Foe {
     dome: { center: Vector3; radius: number; height: number },
     private readonly shieldUp: () => boolean,
   ) {
-    super(3);
+    super(MAGE.health);
 
     this.figure.scale.setScalar(2);
     const robe = new Mesh(new ConeGeometry(1.4, 4.2, 10), new MeshStandardMaterial({ color: '#2a1030', roughness: 0.9 }));
@@ -91,6 +90,7 @@ export class Mage extends Foe {
       depthWrite: false,
     });
     this.dome = new Mesh(new SphereGeometry(1, 40, 24), this.domeMaterial);
+    this.dome.userData.noFlash = true;
     this.dome.scale.set(dome.radius, dome.height, dome.radius);
     // Only the figure turns toward the dragon; the dome stays centered on the keep.
     this.dome.position.copy(dome.center).sub(post.position);
@@ -114,7 +114,7 @@ export class Mage extends Foe {
     if (!this.active) return;
     this.reload -= dt * ctx.difficulty.enemyFireRate;
     if (this.reload <= 0) {
-      this.reload = CAST_EVERY;
+      this.reload = MAGE.castEvery;
       ctx.fire('orb', this.orb.getWorldPosition(new Vector3()), ctx.dragon);
       ctx.cue('cast');
     }

@@ -14,6 +14,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import type { Quality } from '../logic/settings';
 import { Sky } from '../world/sky';
 
 /** Warm sunset grade with a soft vignette, applied before tone mapping. */
@@ -72,6 +73,15 @@ export class Renderer {
 
   setExposure(exposure: number): void {
     this.webgl.toneMappingExposure = exposure;
+  }
+
+  /** Lower quality renders fewer pixels and drops the glow, for less powerful computers. */
+  setQuality(quality: Quality): void {
+    const ratio = quality === 'haute' ? Math.min(window.devicePixelRatio, 1.5) : quality === 'moyenne' ? 1 : 0.75;
+    this.webgl.setPixelRatio(ratio);
+    this.composer.setPixelRatio(ratio);
+    this.bloom.enabled = quality !== 'basse';
+    this.resize();
   }
 
   resize(): void {

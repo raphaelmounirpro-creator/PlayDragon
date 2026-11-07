@@ -1,22 +1,10 @@
-import {
-  BufferGeometry,
-  Color,
-  ConeGeometry,
-  CylinderGeometry,
-  DoubleSide,
-  Float32BufferAttribute,
-  Group,
-  Material,
-  Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  SphereGeometry,
-  Vector3,
-} from 'three';
+import { BufferGeometry, CatmullRomCurve3, Color, Group, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, SphereGeometry, Vector3 } from 'three';
 import { addBacklight } from '../../fx/backlight';
+import { createLoft, profile, round, Section, shapeLoft } from '../loft';
 import { createSpikeGeometry, placeSpike } from '../spike';
+import { createMembraneMaterial, Wing, WingShape } from '../wing';
 
-/** How a gargoyle looks: dark imp, mossy stone shooter or the giant guardian. */
+/** How a gargoyle looks: dark imp, mossy stone spitter, giant stone guardian or bat queen. */
 export interface GargoyleLook {
   skin: string;
   membrane: string;
@@ -24,126 +12,128 @@ export interface GargoyleLook {
   size: number;
   /** Molten glow in the skin (the guardian's cracks). */
   ember: number;
+  /** Large pointed ears instead of horns (the bat queen). */
+  ears?: boolean;
 }
 
-export interface GargoyleModel {
-  root: Group;
-  wings: [Group, Group];
-  /** Where it spits stones from (model space). */
-  mouth: Vector3;
-}
+const v = (x: number, y: number, z: number) => new Vector3(x, y, z);
+
+/** Bat-like wing with three fingers, scaled to a gargoyle (model units, before `size`). */
+const GARGOYLE_WING: WingShape = {
+  shoulder: v(0.8, 1.0, -0.6),
+  elbow: v(3.2, 2.0, 0),
+  wrist: v(5.6, 2.6, -0.9),
+  tips: [v(11.5, 2.2, 0.4), v(9.2, 0.6, 2.8), v(6.4, 0.1, 4)],
+  trailingRoot: v(0.8, 0.2, 2.6),
+  armRadii: [0.3, 0.24],
+  fingerRadii: [0.16, 0.13, 0.11],
+  scallopDepth: 0.42,
+  claw: 0.9,
+};
 
 const SUNSET_RIM = new Color(1.0, 0.45, 0.15);
+const DOWN = v(0, -1, 0);
+const BACK = v(0, 0, 1);
 
-/** Bat wing: arm to a clawed tip, three fingers and a scalloped trailing edge. */
-function wingGeometry(side: number): BufferGeometry {
-  const p = [
-    [0, 0, 0],
-    [5, 2.2, -0.8],
-    [10.5, 1.6, 0.6],
-    [8, -0.4, 3.2],
-    [6, 0.7, 2.4],
-    [4, -0.6, 4.2],
-    [2.2, 0.2, 2.8],
-    [0.5, -0.4, 2.2],
-  ].map(([x, y, z]) => [x * side, y, z]);
-  const triangles = [[1, 2, 3], [1, 3, 4], [1, 4, 5], [1, 5, 6], [0, 1, 6], [0, 6, 7]];
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new Float32BufferAttribute(triangles.flat().flatMap((i) => p[i]), 3));
-  geometry.computeVertexNormals();
-  return geometry;
+interface LookMaterials {
+  skin: MeshStandardMaterial;
+  membrane: Material;
+  claw: Material;
+  eyes: Material;
 }
 
-interface Kit {
-  body: SphereGeometry;
-  head: SphereGeometry;
-  snout: ConeGeometry;
-  tail: ConeGeometry;
-  leg: ConeGeometry;
-  arm: CylinderGeometry;
-  horn: BufferGeometry;
-  eye: SphereGeometry;
-  wings: [BufferGeometry, BufferGeometry];
+const materialCache = new Map<string, LookMaterials>();
+const bodyCache = new Map<string, Array<[BufferGeometry, keyof LookMaterials]>>();
+
+function lookKey(look: GargoyleLook): string {
+  return `${look.skin}|${look.membrane}|${look.eyes.getHexString()}|${look.ember}|${look.ears ?? false}`;
 }
 
-let kit: Kit | null = null;
-
-/** Geometries are shared by every gargoyle. */
-function sharedKit(): Kit {
-  kit ??= {
-    body: new SphereGeometry(1, 16, 12),
-    head: new SphereGeometry(1, 14, 10),
-    snout: new ConeGeometry(0.55, 1.6, 8),
-    tail: new ConeGeometry(0.55, 5, 8),
-    leg: new ConeGeometry(0.35, 2.2, 6),
-    arm: new CylinderGeometry(0.16, 0.24, 1, 6),
-    horn: createSpikeGeometry(1.2, 0.8),
-    eye: new SphereGeometry(0.22, 8, 6),
-    wings: [wingGeometry(1), wingGeometry(-1)],
-  };
-  return kit;
-}
-
-const materials = new Map<string, { skin: Material; membrane: Material; eyes: Material }>();
-
-function lookMaterials(look: GargoyleLook): { skin: Material; membrane: Material; eyes: Material } {
-  const key = `${look.skin}|${look.membrane}|${look.eyes.getHexString()}|${look.ember}`;
-  let set = materials.get(key);
+function materialsFor(look: GargoyleLook): LookMaterials {
+  const key = lookKey(look);
+  let set = materialCache.get(key);
   if (!set) {
     const skin = new MeshStandardMaterial({ color: look.skin, roughness: 0.8, metalness: 0.1, emissive: '#ff5a1a', emissiveIntensity: look.ember });
     addBacklight(skin, { rimColor: SUNSET_RIM, rimPower: 4 });
-    const membrane = new MeshStandardMaterial({ color: look.membrane, roughness: 0.8, side: DoubleSide, emissive: '#ff4a1a', emissiveIntensity: 0.2 });
-    addBacklight(membrane, { rimColor: SUNSET_RIM, rimPower: 5, transmission: new Color(1.2, 0.5, 0.15) });
-    set = { skin, membrane, eyes: new MeshBasicMaterial({ color: look.eyes }) };
-    materials.set(key, set);
+    const claw = new MeshStandardMaterial({ color: '#1a1412', roughness: 0.4, metalness: 0.2 });
+    addBacklight(claw, { rimColor: SUNSET_RIM, rimPower: 4 });
+    set = { skin, membrane: createMembraneMaterial(GARGOYLE_WING, look.membrane), claw, eyes: new MeshBasicMaterial({ color: look.eyes }) };
+    materialCache.set(key, set);
   }
   return set;
 }
 
-function part(geometry: BufferGeometry, material: Material, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1): Mesh {
-  const mesh = new Mesh(geometry, material);
-  mesh.position.set(x, y, z);
-  mesh.scale.set(sx, sy, sz);
-  return mesh;
+function loft(points: Vector3[], sectionAt: (t: number) => Section, segments = 20, radial = 12): BufferGeometry {
+  const geometry = createLoft(segments, radial);
+  shapeLoft(geometry, new CatmullRomCurve3(points), sectionAt);
+  return geometry;
 }
 
-/** A hunched winged gargoyle facing -Z: horned head, glowing eyes, clawed legs and a tail. */
-export function createGargoyleModel(look: GargoyleLook): GargoyleModel {
-  const k = sharedKit();
-  const m = lookMaterials(look);
-  const root = new Group();
-  const body = new Group();
-  body.scale.setScalar(look.size);
-  root.add(body);
+/** A spike geometry already placed in model space (horns, ears, claws, dorsal spines). */
+function spike(position: Vector3, direction: Vector3, curl: Vector3, width: number, length: number, flatten = 0.8): BufferGeometry {
+  const holder = new Mesh(createSpikeGeometry(1.0, flatten));
+  placeSpike(holder, position, direction, curl, width, length);
+  return holder.geometry.clone().applyMatrix4(holder.matrix);
+}
 
-  const snout = part(k.snout, m.skin, 0, 0.9, -3.9);
-  snout.rotation.x = -Math.PI / 2;
-  const tail = part(k.tail, m.skin, 0, -0.2, 3.6);
-  tail.rotation.x = Math.PI / 2 + 0.25;
-  body.add(part(k.body, m.skin, 0, 0, 0, 1.5, 1.3, 2.3), part(k.head, m.skin, 0, 1.2, -2.6, 1.0, 0.9, 1.3), snout, tail);
+/** Static parts of the body (shared by every gargoyle with the same look). */
+function bodyParts(look: GargoyleLook): Array<[BufferGeometry, keyof LookMaterials]> {
+  const key = lookKey(look);
+  const cached = bodyCache.get(key);
+  if (cached) return cached;
+  const torsoWidth = profile([[0, 0.5], [0.12, 0.75], [0.28, 1.15], [0.42, 1.0], [0.55, 0.6], [0.75, 0.3], [1, 0.05]]);
+  const torsoHeight = profile([[0, 0.55], [0.12, 0.85], [0.28, 1.3], [0.42, 1.05], [0.55, 0.6], [0.75, 0.3], [1, 0.05]]);
+  const skullWidth = profile([[0, 0.7], [0.4, 0.75], [1, 0.22]]);
+  const skullHeight = profile([[0, 0.65], [0.4, 0.6], [1, 0.2]]);
+  const parts: Array<[BufferGeometry, keyof LookMaterials]> = [
+    [loft([v(0, 1.4, -2.6), v(0, 0.9, -1.4), v(0, 0.5, 0.2), v(0, 0.3, 1.8), v(0, -0.1, 3.4), v(0, 0.2, 5), v(0, 0.6, 6.4)], (t) => ({ width: torsoWidth(t), height: torsoHeight(t), ridge: 0.12 }), 40, 16), 'skin'],
+    [loft([v(0, 1.5, -2.1), v(0, 1.62, -3.2), v(0, 1.3, -4.5)], (t) => ({ width: skullWidth(t), height: skullHeight(t), bottom: 0.6, ridge: 0.15 })), 'skin'],
+    [loft([v(0, 1.1, -2.4), v(0, 0.95, -3.4), v(0, 1.05, -4.3)], (t) => ({ width: 0.5 - t * 0.32, height: 0.28 - t * 0.12, top: 0.4 })), 'skin'],
+  ];
   for (const side of [-1, 1]) {
-    const leg = part(k.leg, m.skin, 0.8 * side, -1.6, 0.8);
-    leg.rotation.x = Math.PI + 0.3;
-    const horn = new Mesh(k.horn, m.skin);
-    placeSpike(horn, new Vector3(0.55 * side, 1.9, -2.4), new Vector3(0.35 * side, 0.7, 1), new Vector3(0, -1, 0.4), 0.4, 1.8);
-    body.add(leg, horn, part(k.eye, m.eyes, 0.45 * side, 1.45, -3.45));
+    if (look.ears) parts.push([spike(v(0.45 * side, 1.9, -2.5), v(0.7 * side, 1, 0.3), BACK, 0.7, 2, 0.3), 'skin']);
+    else parts.push([spike(v(0.4 * side, 1.95, -2.6), v(0.3 * side, 0.8, 1), v(0, -1, 0.4), 0.35, 1.6), 'claw']);
+    const eye = new SphereGeometry(0.13, 10, 8).translate(0.34 * side, 1.72, -3.55);
+    parts.push([eye, 'eyes']);
+    const hip = v(0.55 * side, -0.2, 1.4);
+    const knee = v(0.75 * side, -1.4, 0.9);
+    const foot = v(0.6 * side, -2.3, 1.5);
+    parts.push([loft([hip, knee, foot], (t) => round(0.38 - t * 0.22), 10, 8), 'skin']);
+    for (const spread of [-0.35, 0, 0.35]) {
+      parts.push([spike(foot, v(spread * side, -0.6, -1), DOWN, 0.16, 0.7, 0.75), 'claw']);
+    }
+  }
+  for (let i = 0; i < 5; i++) {
+    const z = -1.6 + i * 1.3;
+    parts.push([spike(v(0, 1.2 - i * 0.18, z), v(0, 1, 0.9), BACK, 0.22 - i * 0.02, 0.8 - i * 0.08, 0.45), 'claw']);
+  }
+  bodyCache.set(key, parts);
+  return parts;
+}
+
+/** A hunched winged gargoyle facing -Z: sculpted body, horned head, glowing eyes, articulated wings. */
+export class GargoyleModel {
+  readonly root = new Group();
+  /** Where it spits from (model space, already scaled). */
+  readonly mouth: Vector3;
+  private readonly wings: [Wing, Wing];
+
+  constructor(look: GargoyleLook) {
+    const materials = materialsFor(look);
+    const body = new Group();
+    for (const [geometry, material] of bodyParts(look)) body.add(new Mesh(geometry, materials[material]));
+    const wingMaterials = { membrane: materials.membrane, skin: materials.skin, claw: materials.claw };
+    this.wings = [new Wing(1, wingMaterials, GARGOYLE_WING), new Wing(-1, wingMaterials, GARGOYLE_WING)];
+    body.add(this.wings[0].group, this.wings[1].group);
+    body.scale.setScalar(look.size);
+    this.root.add(body);
+    this.mouth = v(0, 1.05, -4.6).multiplyScalar(look.size);
   }
 
-  const wings: [Group, Group] = [new Group(), new Group()];
-  wings.forEach((wing, i) => {
-    const side = i === 0 ? 1 : -1;
-    wing.position.set(1.2 * side, 0.8, -0.4);
-    const arm = part(k.arm, m.skin, 2.5 * side, 1.1, -0.4);
-    arm.scale.set(1, 5.6, 1);
-    arm.rotation.set(0, 0, (-Math.PI / 2 + 0.42) * side);
-    wing.add(new Mesh(k.wings[i], m.membrane), arm);
-    body.add(wing);
-  });
-  return { root, wings, mouth: new Vector3(0, 0.9 * look.size, -4.6 * look.size) };
-}
-
-/** Raises (positive) or lowers both wings. */
-export function flapGargoyle(model: GargoyleModel, angle: number): void {
-  model.wings[0].rotation.z = angle;
-  model.wings[1].rotation.z = -angle;
+  /** flap > 0 raises the wings; fold tucks them back (diving). */
+  pose(flap: number, fold = 0): void {
+    const sweep = -flap * 0.12;
+    this.wings[0].update(flap, sweep, fold);
+    this.wings[1].update(flap, sweep, fold);
+  }
 }

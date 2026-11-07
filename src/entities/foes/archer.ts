@@ -1,11 +1,7 @@
 import { BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial, SphereGeometry, Vector3 } from 'three';
-import { ARCHER_SCORE } from '../../config';
+import { ARCHER } from '../../config';
 import type { Post } from '../../world/castle';
 import { Foe, FoeContext } from './foe';
-
-const RANGE = 1100;
-const RELOAD_MIN = 2.6;
-const RELOAD_SPREAD = 1.8;
 
 interface SoldierKit {
   body: CylinderGeometry;
@@ -39,9 +35,9 @@ function soldierKit(): SoldierKit {
 /** Crossbowman on the castle walls: shoots quarrels at the dragon during the siege. */
 export class Archer extends Foe {
   readonly radius = 9;
-  readonly score = ARCHER_SCORE;
+  readonly score = ARCHER.score;
   private readonly aim = new Group();
-  private reload = Math.random() * RELOAD_SPREAD + 1;
+  private reload = Math.random() * ARCHER.reloadSpread + 1;
   private active = false;
 
   constructor(post: Post) {
@@ -73,10 +69,10 @@ export class Archer extends Foe {
     const toDragon = ctx.dragon.clone().sub(this.position);
     this.face(toDragon.clone().setY(0));
     this.aim.rotation.x = Math.atan2(toDragon.y, Math.hypot(toDragon.x, toDragon.z)) * 0.8;
-    if (!this.active || toDragon.length() > RANGE) return;
+    if (!this.active || toDragon.length() > ARCHER.range) return;
     this.reload -= dt * ctx.difficulty.enemyFireRate;
     if (this.reload <= 0) {
-      this.reload = RELOAD_MIN + Math.random() * RELOAD_SPREAD;
+      this.reload = ARCHER.reloadMin + Math.random() * ARCHER.reloadSpread;
       ctx.fire('quarrel', this.object.localToWorld(new Vector3(0, 4.7, -3)), ctx.dragon);
       ctx.cue('twang');
     }
