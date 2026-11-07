@@ -92,27 +92,72 @@ export function createGlowTexture(): Texture {
 }
 
 /** Overlapping dark scales, used as bump and color detail on the dragon's hide. */
-export function createScaleTexture(): Texture {
-  const width = 256;
-  const height = 256;
-  const [canvas, context] = createCanvas(width, height);
-  context.fillStyle = '#2a1d17';
-  context.fillRect(0, 0, width, height);
-  const scale = 16;
-  for (let row = 0; row < height / (scale * 0.55) + 2; row++) {
-    for (let col = 0; col < width / scale + 2; col++) {
-      const x = col * scale + (row % 2) * scale * 0.5;
-      const y = row * scale * 0.55;
-      const gradient = context.createRadialGradient(x, y - scale * 0.3, 1, x, y, scale * 0.65);
-      gradient.addColorStop(0, '#6b4a36');
-      gradient.addColorStop(0.7, '#33241b');
-      gradient.addColorStop(1, '#120c09');
-      context.fillStyle = gradient;
-      context.beginPath();
-      context.arc(x, y, scale * 0.6, 0, Math.PI);
-      context.fill();
-    }
+const HIDE_WIDTH = 512; // around the body (u)
+const HIDE_LENGTH = 256; // along the body (v), repeated
+const SCALE_SIZE = 16;
+const BELLY_START = 0.62; // the underside of a loft sits around u = 0.75
+const BELLY_END = 0.88;
+
+/** One overlapping scale whose rounded free edge points toward the tail (+y). */
+function drawScale(context: CanvasRenderingContext2D, x: number, y: number): void {
+  const half = SCALE_SIZE * 0.62;
+  const gradient = context.createRadialGradient(x, y + 2, 1, x, y + 4, half * 1.3);
+  gradient.addColorStop(0, '#5f4636');
+  gradient.addColorStop(0.65, '#33241c');
+  gradient.addColorStop(1, '#1b130f');
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.moveTo(x - half, y);
+  context.quadraticCurveTo(x - half, y + SCALE_SIZE * 1.05, x, y + SCALE_SIZE * 1.1);
+  context.quadraticCurveTo(x + half, y + SCALE_SIZE * 1.05, x + half, y);
+  context.closePath();
+  context.fill();
+}
+
+/** Broad ventral plates running across the belly. */
+function drawBellyPlates(context: CanvasRenderingContext2D): void {
+  const left = BELLY_START * HIDE_WIDTH;
+  const right = BELLY_END * HIDE_WIDTH;
+  for (let y = 0; y < HIDE_LENGTH; y += SCALE_SIZE) {
+    const gradient = context.createLinearGradient(0, y, 0, y + SCALE_SIZE);
+    gradient.addColorStop(0, '#6b5341');
+    gradient.addColorStop(0.75, '#3a2b20');
+    gradient.addColorStop(1, '#140e0a');
+    context.fillStyle = gradient;
+    context.fillRect(left, y, right - left, SCALE_SIZE - 1);
   }
+  // Soft transition between plates and flank scales.
+  for (const [from, to] of [[left - 14, left + 10], [right + 14, right - 10]]) {
+    const fade = context.createLinearGradient(from, 0, to, 0);
+    fade.addColorStop(0, 'rgba(18,12,9,0)');
+    fade.addColorStop(0.5, 'rgba(18,12,9,0.75)');
+    fade.addColorStop(1, 'rgba(18,12,9,0)');
+    context.fillStyle = fade;
+    context.fillRect(Math.min(from, to), 0, Math.abs(to - from), HIDE_LENGTH);
+  }
+}
+
+/**
+ * Dragon hide wrapped around a loft: overlapping scales on the back and flanks,
+ * ventral plates along the belly, a darker stripe along the dorsal crest. Tiles seamlessly.
+ */
+export function createHideTexture(): Texture {
+  const [canvas, context] = createCanvas(HIDE_WIDTH, HIDE_LENGTH);
+  context.fillStyle = '#1d1410';
+  context.fillRect(0, 0, HIDE_WIDTH, HIDE_LENGTH);
+  // Rows nearer the head are drawn last so their free edges overlap the next row.
+  for (let row = HIDE_LENGTH / SCALE_SIZE; row >= -1; row--) {
+    const offset = (row & 1) * SCALE_SIZE * 0.5;
+    for (let x = -SCALE_SIZE; x <= HIDE_WIDTH + SCALE_SIZE; x += SCALE_SIZE) drawScale(context, x + offset, row * SCALE_SIZE);
+  }
+  drawBellyPlates(context);
+  const crest = context.createLinearGradient(0.25 * HIDE_WIDTH - 14, 0, 0.25 * HIDE_WIDTH + 14, 0);
+  crest.addColorStop(0, 'rgba(8,5,4,0)');
+  crest.addColorStop(0.5, 'rgba(8,5,4,0.55)');
+  crest.addColorStop(1, 'rgba(8,5,4,0)');
+  context.fillStyle = crest;
+  context.fillRect(0.25 * HIDE_WIDTH - 14, 0, 28, HIDE_LENGTH);
+
   const texture = toTexture(canvas);
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
@@ -143,19 +188,44 @@ export function createStoneTexture(): Texture {
   return texture;
 }
 
-/** Leathery wing membrane with dark veins and glints of ember light. */
-export function createMembraneTexture(): Texture {
+/** A bone of the wing in its rest pose, seen from above: [x1, z1, x2, z2]. */
+export type WingBone2D = [number, number, number, number];
+
+function distanceToSegment(x: number, z: number, [x1, z1, x2, z2]: WingBone2D): number {
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  const k = Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - x1 - dx * k, z - z1 - dz * k);
+}
+
+/**
+ * Leathery wing membrane painted from the wing's own bones: thick and dark along the
+ * fingers, thinner and warmer in the middle of each panel (where the sun shines through),
+ * with dark veins and glints of ember light. `toRest` maps texture (u, v) to rest (x, z).
+ */
+export function createMembraneTexture(bones: WingBone2D[], toRest: (u: number, v: number) => [number, number]): Texture {
   const size = 512;
   const [canvas, context] = createCanvas(size, size);
   const random = createRandom(7);
-  const base = context.createLinearGradient(0, 0, size, size);
-  base.addColorStop(0, '#3a2219');
-  base.addColorStop(1, '#22130e');
-  context.fillStyle = base;
-  context.fillRect(0, 0, size, size);
+  const image = context.createImageData(size, size);
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      // CanvasTexture is flipped: the top canvas row is v = 1.
+      const [x, z] = toRest(px / size, 1 - py / size);
+      let distance = Infinity;
+      for (const bone of bones) distance = Math.min(distance, distanceToSegment(x, z, bone));
+      const panel = smoothstep(0.6, 6, distance) * (0.85 + 0.15 * valueNoise(x * 0.4, z * 0.4));
+      const index = (py * size + px) * 4;
+      image.data[index] = 24 + 136 * panel;
+      image.data[index + 1] = 12 + 88 * panel;
+      image.data[index + 2] = 9 + 36 * panel;
+      image.data[index + 3] = 255;
+    }
+  }
+  context.putImageData(image, 0, 0);
 
-  context.strokeStyle = 'rgba(12,6,4,0.75)';
-  for (let i = 0; i < 60; i++) {
+  context.strokeStyle = 'rgba(12,6,4,0.55)';
+  for (let i = 0; i < 45; i++) {
     let x = random() * size;
     let y = random() * size;
     context.lineWidth = 0.6 + random() * 1.8;

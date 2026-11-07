@@ -18,6 +18,11 @@ const MAX_BANK = 0.7;
 const STEER_RESPONSE = 2.8;
 const VERTICAL_SPEED = STEER_SPEED * 0.7;
 const BASE_FOV = 58;
+const WORLD_UP = new Vector3(0, 1, 0);
+const MENU_ORBIT_ANGLE = 2.45; // radians from the dragon's heading: behind and to its right
+const MENU_DISTANCE = 52;
+const MENU_HEIGHT = 9;
+const MENU_FRAMING = 16;
 const BOOST_FOV = 12;
 const PITCH_SPEED_SCALE = 90;
 
@@ -169,10 +174,16 @@ export class FlightController {
     const target = new Vector3();
     const lookAt = new Vector3();
     if (mode === 'menu') {
-      const angle = Math.sin(this.time * 0.12) * 0.5;
-      const side = new Vector3().crossVectors(this.forward, new Vector3(0, 1, 0)).normalize();
-      target.copy(this.position).addScaledVector(this.forward, -58).addScaledVector(side, angle * 60).add(new Vector3(0, 14, 0));
-      lookAt.copy(this.position).addScaledVector(this.forward, 80).add(new Vector3(0, 18, 0));
+      // Slow showcase orbit behind and to the right, the dragon framed right of the title.
+      const angle = MENU_ORBIT_ANGLE + Math.sin(this.time * 0.08) * 0.45;
+      const side = new Vector3().crossVectors(this.forward, WORLD_UP).normalize();
+      target
+        .copy(this.position)
+        .addScaledVector(this.forward, Math.cos(angle) * MENU_DISTANCE)
+        .addScaledVector(side, Math.sin(angle) * MENU_DISTANCE)
+        .addScaledVector(WORLD_UP, MENU_HEIGHT);
+      const screenRight = this.position.clone().sub(target).cross(WORLD_UP).normalize();
+      lookAt.copy(this.position).addScaledVector(screenRight, -MENU_FRAMING).addScaledVector(WORLD_UP, 3);
     } else {
       // Three-quarter rear view, slightly above: the dragon is silhouetted against the sun.
       const side = new Vector3().crossVectors(this.forward, new Vector3(0, 1, 0)).normalize();

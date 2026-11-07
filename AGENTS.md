@@ -55,8 +55,12 @@ détruire. Le jeu est livré en `.exe` Windows portable.
     du château), `src/logic/abilities.ts` (coûts, durées, recharges des pouvoirs) et
     `src/world/flightPath.ts` (rivière, relief, trajectoire).
   - **View :** tout ce qui s'affiche. `src/world/` (ciel, terrain, nuages, château…), `src/entities/`
-    (dragon, ailes, projectiles), `src/fx/` (textures procédurales, particules), `src/render/`
+    (dragon, ailes, projectiles), `src/fx/` (textures procédurales, particules, contre-jour), `src/render/`
     (renderer et post-traitement), `src/ui/` (HUD et écrans).
+  - **Modélisation du dragon :** entièrement procédurale. `loft.ts` balaie des sections ovales le long
+    d'une courbe (corps, tête, cornes, pattes). `spike.ts` génère les lames courbes (épines, griffes,
+    collerette). `dragonHead.ts` et `dragonLimbs.ts` assemblent la tête et les pattes. `wing.ts` gère
+    les os articulés et la membrane, dont la texture est peinte d'après ses os.
   - **Controller :** `src/game/` (`game.ts` orchestre, `flight.ts` pilote le vol et la caméra, `combat.ts`
     gère tirs et collisions) et `src/core/input.ts`.
   - La logique métier reste dans le Model, testée sans WebGL. Les controllers ne font que relier les

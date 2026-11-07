@@ -16,6 +16,7 @@ import { Enemies } from '../entities/enemies';
 import { Shield } from '../entities/shield';
 import { ABILITIES, Abilities, AbilityId, definition } from '../logic/abilities';
 import { Effects, randomDirection } from '../fx/particles';
+import { sunInView } from '../fx/backlight';
 import { createGlowTexture } from '../fx/textures';
 import { GameState } from '../logic/gameState';
 import { Renderer } from '../render/renderer';
@@ -163,6 +164,7 @@ export class Game {
     );
 
     this.abilities.update(dt);
+    sunInView.value.copy(SUN_DIRECTION).transformDirection(this.camera.matrixWorldInverse);
     const hotkey = this.input.consumeAbilityKey();
     if (hotkey >= 0) this.useAbility(ABILITIES[hotkey].id);
     this.shield.update(this.flight.position, this.abilities.isActive('shield'), time);
