@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('node:path');
+const { setupAutoUpdate } = require('./updater.cjs');
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -12,6 +13,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
   Menu.setApplicationMenu(null);
@@ -22,7 +24,11 @@ function createWindow() {
       event.preventDefault();
     }
   });
+  return window;
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  const window = createWindow();
+  window.webContents.once('did-finish-load', () => setupAutoUpdate(window));
+});
 app.on('window-all-closed', () => app.quit());

@@ -418,6 +418,50 @@ kbd {
   transition: none;
 }
 
+/* Update notice (bottom right) ------------------------------------------- */
+
+.update-notice {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 440px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 210, 140, 0.6);
+  border-radius: 4px;
+  background: rgba(24, 9, 6, 0.9);
+  box-shadow: 0 0 24px rgba(255, 140, 50, 0.35);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--gold);
+  animation: fade-in 0.6s ease both;
+}
+
+.update-text b {
+  color: var(--cream);
+}
+
+.update-button {
+  flex-shrink: 0;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 220, 160, 0.7);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ff9b42, #c4461b);
+  color: #fff8ec;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.update-button:hover {
+  box-shadow: 0 0 16px rgba(255, 160, 70, 0.7);
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
