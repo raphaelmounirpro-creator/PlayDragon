@@ -118,6 +118,92 @@ body {
   outline-offset: 4px;
 }
 
+.cta--ghost {
+  background: rgba(30, 12, 8, 0.55);
+  box-shadow: none;
+}
+
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* Level and difficulty choice ------------------------------------------- */
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 36px;
+  margin: -10px 0 18px;
+}
+
+.choice-group {
+  display: grid;
+  gap: 8px;
+}
+
+.choice-label {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 220, 170, 0.35);
+  border-radius: 999px;
+  background: rgba(30, 12, 8, 0.6);
+  color: var(--gold);
+  font-family: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: rgba(255, 220, 170, 0.8);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(255, 155, 66, 0.45), rgba(196, 70, 27, 0.45));
+  color: var(--cream);
+}
+
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 2px;
+}
+
+.best-score {
+  margin: 0 0 24px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.best-score.is-new {
+  color: var(--cream);
+  text-shadow: 0 0 18px rgba(255, 170, 70, 0.9);
+}
+
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -198,6 +284,26 @@ kbd {
 
 .bar-fill--castle {
   background: var(--castle);
+}
+
+.bar-fill--boss {
+  background: linear-gradient(90deg, #6a2a14, #ff8a3a);
+  box-shadow: 0 0 12px rgba(255, 110, 40, 0.7);
+}
+
+.sound-state {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--text);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 236, 205, 0.6);
+  text-shadow: none;
+}
+
+.sound-state.is-muted {
+  color: var(--ember);
 }
 
 .score {

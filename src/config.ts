@@ -1,5 +1,3 @@
-import { Vector3 } from 'three';
-
 export const PATH_LENGTH = 6400;
 export const FLIGHT_SPEED = 95;
 export const BOOST_FACTOR = 1.9;
@@ -20,7 +18,21 @@ export const ENEMY_DAMAGE = 10;
 
 export const FIREBALL_SPEED = 520;
 export const FIREBALL_COOLDOWN = 0.35;
-export const BOLT_SPEED = 240;
 
-export const SUN_DIRECTION = new Vector3(0.1, 0.07, -1).normalize();
-export const FOG_COLOR = 0xb85a30;
+
+// Enemies: points for shooting them down
+export const SHOOTER_SCORE = 200;
+export const BAT_SCORE = 25;
+export const WYVERN_SCORE = 300;
+export const GUARDIAN_SCORE = 2000;
+export const ARCHER_SCORE = 100;
+export const MAGE_SCORE = 400;
+
+// Enemies: damage dealt to the dragon (before the difficulty multiplier)
+export const STONE_DAMAGE = 8;
+export const BOULDER_DAMAGE = 18;
+export const QUARREL_DAMAGE = 6;
+export const ORB_DAMAGE = 12;
+export const BAT_BITE = 3;
+export const WYVERN_BITE = 15;
+export const GUARDIAN_CHARGE_DAMAGE = 25;

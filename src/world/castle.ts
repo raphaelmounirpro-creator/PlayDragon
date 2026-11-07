@@ -14,7 +14,10 @@ import {
 } from 'three';
 import { Effects } from '../fx/particles';
 import { createStoneTexture } from '../fx/textures';
-import { terrainHeight } from './flightPath';
+import type { Landscape } from './landscape';
+import type { CastleLayout } from './levels';
+
+export const KEEP_ID = 'donjon';
 
 export interface CastlePart {
   id: string;
@@ -24,6 +27,12 @@ export interface CastlePart {
   top: Vector3;
   shake: number;
   baseX: number;
+}
+
+/** Where a defender stands (world space) and which way is outside. */
+export interface Post {
+  position: Vector3;
+  outward: Vector3;
 }
 
 interface Debris {
@@ -42,16 +51,41 @@ interface TowerSpec {
   hp: number;
 }
 
-const TOWERS: TowerSpec[] = [
-  { id: 'tour-nord-ouest', x: -62, z: -62, radius: 13, height: 72, hp: 3 },
-  { id: 'tour-nord-est', x: 62, z: -62, radius: 13, height: 72, hp: 3 },
-  { id: 'tour-sud-ouest', x: -62, z: 62, radius: 13, height: 66, hp: 3 },
-  { id: 'tour-sud-est', x: 62, z: 62, radius: 13, height: 66, hp: 3 },
-  { id: 'porte-ouest', x: -17, z: 64, radius: 9, height: 54, hp: 2 },
-  { id: 'porte-est', x: 17, z: 64, radius: 9, height: 54, hp: 2 },
-];
-const KEEP = { id: 'donjon', hp: 6 };
 const WALL_HEIGHT = 38;
+const GATE_HALF_WIDTH = 17;
+const KEEP_Z = -12;
+
+/** Corner, gate and (optional) side towers of a square fortress, front facing +Z. */
+function towerSpecs(layout: CastleLayout): TowerSpec[] {
+  const h = layout.halfSize;
+  const t = layout.towerHeight;
+  const hp = layout.towerHp;
+  const specs: TowerSpec[] = [
+    { id: 'tour-nord-ouest', x: -h, z: -h, radius: 13, height: t, hp },
+    { id: 'tour-nord-est', x: h, z: -h, radius: 13, height: t, hp },
+    { id: 'tour-sud-ouest', x: -h, z: h, radius: 13, height: t * 0.92, hp },
+    { id: 'tour-sud-est', x: h, z: h, radius: 13, height: t * 0.92, hp },
+    { id: 'porte-ouest', x: -GATE_HALF_WIDTH, z: h + 2, radius: 9, height: t * 0.75, hp: Math.max(1, hp - 1) },
+    { id: 'porte-est', x: GATE_HALF_WIDTH, z: h + 2, radius: 9, height: t * 0.75, hp: Math.max(1, hp - 1) },
+  ];
+  if (layout.sideTowers) {
+    specs.push({ id: 'tour-ouest', x: -h, z: 0, radius: 11, height: t * 0.85, hp }, { id: 'tour-est', x: h, z: 0, radius: 11, height: t * 0.85, hp });
+  }
+  return specs;
+}
+
+/** Wall segments along the perimeter, leaving the gate open between the gate towers. */
+function wallSegments(layout: CastleLayout): Array<[number, number, number, number]> {
+  const h = layout.halfSize;
+  const ring: Array<[number, number]> = [[GATE_HALF_WIDTH, h + 2], [h, h]];
+  if (layout.sideTowers) ring.push([h, 0]);
+  ring.push([h, -h], [-h, -h]);
+  if (layout.sideTowers) ring.push([-h, 0]);
+  ring.push([-h, h], [-GATE_HALF_WIDTH, h + 2]);
+  const segments: Array<[number, number, number, number]> = [];
+  for (let i = 0; i < ring.length - 1; i++) segments.push([...ring[i], ...ring[i + 1]]);
+  return segments;
+}
 
 /** The fortress waiting at the end of the valley; each tower and the keep can be destroyed. */
 export class Castle {
@@ -60,19 +94,28 @@ export class Castle {
   private readonly walls = new Group();
   private readonly debris: Debris[] = [];
   private readonly ruins: Vector3[] = [];
+  private readonly segments: Array<[number, number, number, number]>;
+  private readonly keepTop: number;
   private readonly stone: MeshStandardMaterial;
-  private readonly roof = new MeshStandardMaterial({ color: '#2d2a36', roughness: 0.6, metalness: 0.2 });
+  private readonly roof: MeshStandardMaterial;
   private readonly windowLight = new MeshStandardMaterial({ color: '#000000', emissive: new Color('#ffb050'), emissiveIntensity: 5 });
   private readonly banner = new MeshStandardMaterial({ color: '#6e1414', roughness: 0.8, side: DoubleSide });
 
-  constructor(position: Vector3) {
+  constructor(
+    position: Vector3,
+    private readonly land: Landscape,
+    private readonly layout: CastleLayout,
+  ) {
     const texture = createStoneTexture();
     texture.repeat.set(4, 3);
-    this.stone = new MeshStandardMaterial({ map: texture, color: '#d9c2ae', roughness: 0.92, metalness: 0 });
+    this.stone = new MeshStandardMaterial({ map: texture, color: layout.stone, roughness: 0.92, metalness: 0 });
+    this.roof = new MeshStandardMaterial({ color: layout.roof, roughness: 0.6, metalness: 0.2 });
     this.group.position.copy(position);
+    this.keepTop = layout.keepHeight - 8;
+    this.segments = wallSegments(layout);
 
-    for (const spec of TOWERS) this.addPart(spec.id, spec.hp, this.createTower(spec));
-    this.addPart(KEEP.id, KEEP.hp, this.createKeep());
+    for (const spec of towerSpecs(layout)) this.addPart(spec.id, spec.hp, this.createTower(spec));
+    this.addPart(KEEP_ID, layout.keepHp, this.createKeep());
     this.createWalls();
     this.group.add(this.walls);
     this.group.updateMatrixWorld(true);
@@ -96,6 +139,37 @@ export class Castle {
 
   standingParts(): CastlePart[] {
     return this.parts.filter((part) => part.group.visible);
+  }
+
+  isStanding(id: string): boolean {
+    return this.parts.some((part) => part.id === id && part.group.visible);
+  }
+
+  /** Posts on the walkways for the crossbowmen, front walls first (they face the dragon's arrival). */
+  archerPosts(count: number): Post[] {
+    const posts: Post[] = [];
+    const sorted = [...this.segments].sort((a, b) => b[1] + b[3] - (a[1] + a[3]));
+    for (const fractions of [[0.5], [0.25, 0.75]]) {
+      for (const [x1, z1, x2, z2] of sorted) {
+        for (const f of fractions) {
+          const local = new Vector3(x1 + (x2 - x1) * f, WALL_HEIGHT, z1 + (z2 - z1) * f);
+          const outward = local.clone().setY(0).normalize();
+          posts.push({ position: local.addScaledVector(outward, 2).add(this.group.position), outward });
+        }
+      }
+    }
+    return posts.slice(0, count);
+  }
+
+  /** The mage stands on top of the keep, facing the gate. */
+  magePost(): Post {
+    return { position: new Vector3(0, this.keepTop, KEEP_Z + 16).add(this.group.position), outward: new Vector3(0, 0, 1) };
+  }
+
+  /** Center and radii (horizontal, vertical) of the magic dome around the keep. */
+  keepDome(): { center: Vector3; radius: number; height: number } {
+    const height = (this.keepTop + 70) / 2;
+    return { center: new Vector3(0, height - 6, KEEP_Z).add(this.group.position), radius: 44, height };
   }
 
   hit(part: CastlePart): void {
@@ -171,19 +245,20 @@ export class Castle {
 
   private createKeep(): Group {
     const keep = new Group();
-    keep.position.set(0, 0, -12);
-    const body = new Mesh(new BoxGeometry(46, 96, 42), this.stone);
-    body.position.y = 40;
+    keep.position.set(0, 0, KEEP_Z);
+    const height = this.layout.keepHeight;
+    const body = new Mesh(new BoxGeometry(46, height, 42), this.stone);
+    body.position.y = height / 2 - 8;
     const turret = new Mesh(new CylinderGeometry(11, 11, 34, 18), this.stone);
-    turret.position.set(0, 104, 0);
+    turret.position.set(0, this.keepTop + 16, 0);
     const roof = new Mesh(new ConeGeometry(15, 46, 18), this.roof);
-    roof.position.set(0, 144, 0);
-    keep.add(body, turret, roof, this.createBanner(167));
-    this.addCrenellations(keep, 46, 42, 88);
+    roof.position.set(0, this.keepTop + 56, 0);
+    keep.add(body, turret, roof, this.createBanner(this.keepTop + 79));
+    this.addCrenellations(keep, 46, 42, this.keepTop);
     for (let floor = 0; floor < 3; floor++) {
       for (const x of [-12, 0, 12]) {
         const window = new Mesh(new BoxGeometry(3, 6, 1), this.windowLight);
-        window.position.set(x, 34 + floor * 18, 21.2);
+        window.position.set(x, height * 0.35 + floor * height * 0.19, 21.2);
         keep.add(window);
       }
     }
@@ -191,14 +266,7 @@ export class Castle {
   }
 
   private createWalls(): void {
-    const segments: Array<[number, number, number, number]> = [
-      [-62, -62, 62, -62],
-      [-62, -62, -62, 62],
-      [62, -62, 62, 62],
-      [-62, 62, -17, 64],
-      [17, 64, 62, 62],
-    ];
-    for (const [x1, z1, x2, z2] of segments) {
+    for (const [x1, z1, x2, z2] of this.segments) {
       const length = Math.hypot(x2 - x1, z2 - z1);
       const wall = new Group();
       wall.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
@@ -210,8 +278,8 @@ export class Castle {
       this.addCrenellations(wall, length, 8, WALL_HEIGHT);
       this.walls.add(wall);
     }
-    const gate = new Mesh(new BoxGeometry(20, 26, 2), new MeshStandardMaterial({ color: '#2a1a12', roughness: 1 }));
-    gate.position.set(0, 13, 66);
+    const gate = new Mesh(new BoxGeometry(GATE_HALF_WIDTH * 2 - 14, 26, 2), new MeshStandardMaterial({ color: '#2a1a12', roughness: 1 }));
+    gate.position.set(0, 13, this.layout.halfSize + 4);
     this.walls.add(gate);
   }
 
@@ -240,7 +308,7 @@ export class Castle {
   /** How far the ground drops below the castle base at a local position (so towers reach the hillside). */
   private groundOffset(x: number, z: number): number {
     const world = this.group.position;
-    return Math.max(0, world.y - terrainHeight(world.x + x, world.z + z)) + 6;
+    return Math.max(0, world.y - this.land.terrainHeight(world.x + x, world.z + z)) + 6;
   }
 
   private scatterDebris(bounds: Box3, count: number): void {
@@ -273,7 +341,7 @@ export class Castle {
       piece.mesh.rotation.y += piece.spin.y * dt;
       piece.mesh.rotation.z += piece.spin.z * dt;
       world.copy(piece.mesh.position).add(this.group.position);
-      const ground = terrainHeight(world.x, world.z) - this.group.position.y + 2;
+      const ground = this.land.terrainHeight(world.x, world.z) - this.group.position.y + 2;
       if (piece.mesh.position.y <= ground) {
         piece.mesh.position.y = ground;
         piece.resting = true;

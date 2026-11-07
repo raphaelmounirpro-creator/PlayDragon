@@ -2,7 +2,7 @@ import { CatmullRomCurve3, MathUtils, Matrix4, PerspectiveCamera, Vector2, Vecto
 import { BOOST_FACTOR, BRAKE_FACTOR, FLIGHT_SPEED, SIEGE_DISTANCE, STEER_LIMIT_X, STEER_LIMIT_Y, STEER_SPEED } from '../config';
 import { Dragon } from '../entities/dragon';
 import { frameAt, PathFrame } from '../world/pathFrame';
-import { terrainHeight } from '../world/flightPath';
+import type { Landscape } from '../world/landscape';
 
 export type FlightMode = 'menu' | 'voyage' | 'siege' | 'end';
 
@@ -44,6 +44,8 @@ export class FlightController {
   private previousY = 0;
   /** Current speed relative to cruise speed (BRAKE_FACTOR to BOOST_FACTOR). */
   speedFactor = 1;
+  /** While true the dragon stops advancing along the route (a boss bars the way); it can still steer. */
+  hold = false;
   private bank = 0;
   private pitch = 0;
   private time = 0;
@@ -52,6 +54,7 @@ export class FlightController {
 
   constructor(
     private readonly curve: CatmullRomCurve3,
+    private readonly land: Landscape,
     private readonly dragon: Dragon,
     private readonly camera: PerspectiveCamera,
     private readonly castleTarget: Vector3,
@@ -103,7 +106,7 @@ export class FlightController {
     }
     // Gentle wandering so the dragon never looks rail-mounted.
     this.position.y += Math.sin(this.time * 0.9) * 2.5;
-    this.position.y = Math.max(this.position.y, terrainHeight(this.position.x, this.position.z) + MIN_GROUND_CLEARANCE);
+    this.position.y = Math.max(this.position.y, this.land.terrainHeight(this.position.x, this.position.z) + MIN_GROUND_CLEARANCE);
 
     // Nose follows the actual climb or dive: body tilts down when descending, up when climbing.
     const verticalSpeed = dt > 0 ? (this.position.y - this.previousY) / dt : 0;
@@ -122,7 +125,7 @@ export class FlightController {
   }
 
   private followRiver(dt: number, mode: FlightMode): void {
-    if (mode === 'voyage') {
+    if (mode === 'voyage' && !this.hold) {
       this.distance = Math.min(this.siegeStart, this.distance + FLIGHT_SPEED * this.speedFactor * dt);
       this.offset.x = this.moveWithin(this.offset.x, 'x', dt, STEER_LIMIT_X);
       this.offset.y = this.moveWithin(this.offset.y, 'y', dt, STEER_LIMIT_Y);
@@ -193,7 +196,7 @@ export class FlightController {
       lookAt.copy(this.position).addScaledVector(this.forward, 110).add(new Vector3(0, 6, 0));
       if (siegeView) lookAt.lerp(this.castleTarget, 0.45);
     }
-    target.y = Math.max(target.y, terrainHeight(target.x, target.z) + CAMERA_GROUND_CLEARANCE);
+    target.y = Math.max(target.y, this.land.terrainHeight(target.x, target.z) + CAMERA_GROUND_CLEARANCE);
     const smoothing = 1 - Math.exp(-4 * dt);
     this.camera.position.lerp(target, dt === 0 ? 1 : smoothing);
     // Wider field of view at high speed sells the acceleration.

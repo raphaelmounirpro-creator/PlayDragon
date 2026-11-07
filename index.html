@@ -17,10 +17,17 @@
           <div class="bar bar--thin"><div id="speed" class="bar-fill bar-fill--speed"></div></div>
         </div>
         <div id="castle-meter" class="meter meter--castle hidden">
-          <span class="meter-label">Château</span>
+          <span id="castle-label" class="meter-label">Château</span>
           <div class="bar"><div id="castle-hp" class="bar-fill bar-fill--castle"></div></div>
         </div>
-        <div class="score"><span id="score">0</span><small>points</small></div>
+        <div id="boss-meter" class="meter meter--castle meter--boss hidden">
+          <span id="boss-name" class="meter-label"></span>
+          <div class="bar"><div id="boss-hp" class="bar-fill bar-fill--boss"></div></div>
+        </div>
+        <div class="score">
+          <span id="score">0</span><small>points</small>
+          <span id="sound-state" class="sound-state">Son (M)</span>
+        </div>
       </div>
       <div class="journey">
         <div class="journey-track"><div id="journey-progress" class="journey-progress"></div></div>
@@ -33,16 +40,28 @@
     </div>
 
     <section id="menu" class="screen">
-      <p class="eyebrow">Au coucher du soleil</p>
+      <p id="menu-eyebrow" class="eyebrow">Au coucher du soleil</p>
       <h1 class="title">Play<br />Dragon</h1>
-      <p class="tagline">Survole la vallée, traverse les anneaux de lumière.<br />Au bout du chemin, un château t'attend. Réduis-le en cendres.</p>
+      <p class="tagline">Survole la vallée, abats ses gardiens.<br />Au bout du chemin, un château t'attend. Réduis-le en cendres.</p>
+      <div class="choices">
+        <div class="choice-group">
+          <span class="choice-label">Niveau</span>
+          <div id="level-choices" class="chips" role="group" aria-label="Niveau"></div>
+        </div>
+        <div class="choice-group">
+          <span class="choice-label">Difficulté</span>
+          <div id="difficulty-choices" class="chips" role="group" aria-label="Difficulté"></div>
+        </div>
+      </div>
+      <p id="best-score" class="best-score"></p>
       <button id="start" class="cta" type="button">Prendre son envol</button>
       <ul class="controls">
         <li><kbd>Z</kbd><kbd>Q</kbd><kbd>S</kbd><kbd>D</kbd> ou <kbd>↑←↓→</kbd> diriger, puis tourner autour du château</li>
         <li><kbd>E</kbd> accélérer <kbd>A</kbd> freiner</li>
         <li><kbd>1</kbd>–<kbd>4</kbd> pouvoirs (avec tes points)</li>
         <li><kbd>Clic</kbd> / <kbd>Espace</kbd> cracher le feu</li>
-        <li><kbd>Échap</kbd> pause</li>
+        <li><kbd>Échap</kbd> pause <kbd>M</kbd> son</li>
+        <li>Manette Xbox : stick gauche diriger, stick droit viser, <kbd>RT</kbd> feu, <kbd>RB</kbd>/<kbd>LT</kbd> vitesse, <kbd>X</kbd><kbd>Y</kbd><kbd>B</kbd><kbd>LB</kbd> pouvoirs, <kbd>A</kbd> valider</li>
       </ul>
     </section>
 
@@ -50,12 +69,17 @@
       <p id="end-eyebrow" class="eyebrow"></p>
       <h1 id="end-title" class="title title--end"></h1>
       <p id="end-summary" class="tagline"></p>
-      <button id="restart" class="cta" type="button">Rejouer</button>
+      <p id="end-record" class="best-score"></p>
+      <div class="end-actions">
+        <button id="next-level" class="cta hidden" type="button">Niveau suivant</button>
+        <button id="restart" class="cta" type="button">Rejouer</button>
+        <button id="to-menu" class="cta cta--ghost" type="button">Menu</button>
+      </div>
     </section>
 
     <section id="pause" class="screen screen--light hidden">
       <h1 class="title title--end">Pause</h1>
-      <p class="tagline">Appuie sur <kbd>Échap</kbd> pour reprendre.</p>
+      <p class="tagline">Appuie sur <kbd>Échap</kbd> (ou <kbd>Start</kbd>) pour reprendre.</p>
     </section>
 
     <aside id="update-notice" class="update-notice hidden" role="status">

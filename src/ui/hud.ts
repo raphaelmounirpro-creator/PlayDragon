@@ -21,15 +21,29 @@ function element<T extends HTMLElement>(id: string): T {
   return found as T;
 }
 
-/** Everything drawn over the 3D view: menus, bars, score, banners. */
+export interface HudValues {
+  dragonHp: number;
+  castleIntegrity: number;
+  /** The castle's keep is protected by the mage's dome. */
+  keepShielded: boolean;
+  score: number;
+  journey: number;
+  speed: number;
+  boss: { name: string; health: number } | null;
+}
+
+/** Everything drawn over the 3D view during a game: bars, score, banners, powers. */
 export class Hud {
   private readonly hud = element('hud');
-  private readonly menu = element('menu');
-  private readonly end = element('end');
   private readonly pause = element('pause');
   private readonly dragonHp = element('dragon-hp');
   private readonly castleMeter = element('castle-meter');
+  private readonly castleLabel = element('castle-label');
   private readonly castleHp = element('castle-hp');
+  private readonly bossMeter = element('boss-meter');
+  private readonly bossName = element('boss-name');
+  private readonly bossHp = element('boss-hp');
+  private readonly sound = element('sound-state');
   private readonly score = element('score');
   private readonly journey = element('journey-progress');
   private readonly crosshair = element('crosshair');
@@ -71,16 +85,15 @@ export class Hud {
     }
   }
 
-  onStart(callback: () => void): void {
-    element('start').addEventListener('click', callback);
-    element('restart').addEventListener('click', callback);
-  }
-
-  showGame(): void {
-    this.menu.classList.add('hidden');
-    this.end.classList.add('hidden');
+  show(): void {
     this.hud.classList.remove('hidden');
     this.castleMeter.classList.add('hidden');
+    this.bossMeter.classList.add('hidden');
+  }
+
+  hide(): void {
+    this.hud.classList.add('hidden');
+    this.setPaused(false);
   }
 
   showSiege(): void {
@@ -88,24 +101,25 @@ export class Hud {
     this.announce('Le château est en vue ! Q / D pour en faire le tour');
   }
 
-  showEnd(victory: boolean, score: number, seconds: number): void {
-    element('end-eyebrow').textContent = victory ? 'Victoire' : 'Défaite';
-    element('end-title').innerHTML = victory ? 'Le château<br />est tombé' : 'Le dragon<br />est tombé';
-    element('end-summary').textContent = victory
-      ? `Il ne reste que des cendres. ${score} points en ${Math.round(seconds)} secondes.`
-      : `Les défenses du château ont eu raison de toi. ${score} points.`;
-    this.hud.classList.add('hidden');
-    this.end.classList.remove('hidden');
-  }
-
   setPaused(paused: boolean): void {
     this.pause.classList.toggle('hidden', !paused);
   }
 
-  update(dt: number, values: { dragonHp: number; castleIntegrity: number; score: number; journey: number; speed: number }): void {
+  setMuted(muted: boolean): void {
+    this.sound.textContent = muted ? 'Son coupé (M)' : 'Son (M)';
+    this.sound.classList.toggle('is-muted', muted);
+  }
+
+  update(dt: number, values: HudValues): void {
     this.dragonHp.style.width = `${values.dragonHp * 100}%`;
     this.speed.style.width = `${Math.min(1, values.speed / BOOST_FACTOR) * 100}%`;
     this.castleHp.style.width = `${values.castleIntegrity * 100}%`;
+    this.castleLabel.textContent = values.keepShielded ? 'Château · donjon protégé' : 'Château';
+    this.bossMeter.classList.toggle('hidden', values.boss === null);
+    if (values.boss) {
+      this.bossName.textContent = values.boss.name;
+      this.bossHp.style.width = `${values.boss.health * 100}%`;
+    }
     this.score.textContent = String(values.score);
     this.journey.style.width = `${Math.min(1, values.journey) * 100}%`;
     this.bannerTimer -= dt;

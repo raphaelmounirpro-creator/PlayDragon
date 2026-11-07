@@ -1,4 +1,5 @@
-import { Vector2 } from 'three';
+import { MathUtils, Vector2 } from 'three';
+import { Gamepad, PAD, STICK } from './gamepad';
 
 // Letters are read by the character they produce (event.key), so the AZERTY layout works as
 // printed: Z Q S D to steer, E to speed up, A to brake.
@@ -16,14 +17,18 @@ const ABILITY_CODES = [
   ['Digit3', 'Numpad3'],
   ['Digit4', 'Numpad4'],
 ];
+/** Controller buttons for the four powers: X, Y, B, LB. */
+const ABILITY_BUTTONS = [PAD.X, PAD.Y, PAD.B, PAD.LB];
+const AIM_SPEED = 1.6;
 
 function normalize(event: KeyboardEvent): string {
   return event.key.length === 1 ? event.key.toLowerCase() : event.key;
 }
 
-/** Keyboard + mouse state, read by the game each frame. */
+/** Keyboard, mouse and Xbox controller, merged into the few actions the game needs. */
 export class Input {
   readonly pointer = new Vector2();
+  readonly gamepad = new Gamepad();
   private pointerDown = false;
   private readonly keys = new Set<string>();
   private readonly pressed = new Set<string>();
@@ -45,28 +50,53 @@ export class Input {
     window.addEventListener('pointerup', () => (this.pointerDown = false));
   }
 
+  /** Once per frame: reads the controller; its right stick moves the crosshair. */
+  update(dt: number): void {
+    this.gamepad.poll();
+    const aimX = this.gamepad.axis(STICK.RIGHT_X);
+    const aimY = this.gamepad.axis(STICK.RIGHT_Y);
+    if (aimX !== 0 || aimY !== 0) {
+      this.pointer.x = MathUtils.clamp(this.pointer.x + aimX * AIM_SPEED * dt, -0.95, 0.95);
+      this.pointer.y = MathUtils.clamp(this.pointer.y - aimY * AIM_SPEED * dt, -0.95, 0.95);
+    }
+  }
+
   /** -1 (left) to 1 (right). */
   horizontal(): number {
-    return this.axis(RIGHT, LEFT);
+    return this.merge(this.axis(RIGHT, LEFT), this.gamepad.axis(STICK.LEFT_X), PAD.RIGHT, PAD.LEFT);
   }
 
   /** -1 (down) to 1 (up). */
   vertical(): number {
-    return this.axis(UP, DOWN);
+    return this.merge(this.axis(UP, DOWN), -this.gamepad.axis(STICK.LEFT_Y), PAD.UP, PAD.DOWN);
   }
 
-  /** -1 (brake) to 1 (accelerate). */
+  /** -1 (brake) to 1 (accelerate): E / A, or RB / LT. */
   throttle(): number {
-    return this.axis(FASTER, SLOWER);
-  }
-
-  /** Index (0-3) of the ability hotkey pressed this frame, or -1. */
-  consumeAbilityKey(): number {
-    return ABILITY_CODES.findIndex((codes) => codes.map((code) => this.consume(code)).some(Boolean));
+    const pad = (this.gamepad.held(PAD.RB) ? 1 : 0) - (this.gamepad.held(PAD.LT) ? 1 : 0);
+    return MathUtils.clamp(this.axis(FASTER, SLOWER) + pad, -1, 1);
   }
 
   isFiring(): boolean {
-    return this.pointerDown || this.keys.has(FIRE);
+    return this.pointerDown || this.keys.has(FIRE) || this.gamepad.held(PAD.RT);
+  }
+
+  /** Index (0-3) of the power requested this frame (keys 1-4 or X, Y, B, LB), or -1. */
+  consumeAbilityKey(): number {
+    return ABILITY_CODES.findIndex((codes, i) => codes.map((code) => this.consume(code)).some(Boolean) || this.gamepad.pressed(ABILITY_BUTTONS[i]));
+  }
+
+  consumePause(): boolean {
+    return this.consume('Escape') || this.gamepad.pressed(PAD.START);
+  }
+
+  consumeMute(): boolean {
+    return this.consume('m');
+  }
+
+  /** Validates the main button of a menu screen: Enter or A. */
+  consumeConfirm(): boolean {
+    return this.consume('Enter') || this.gamepad.pressed(PAD.A);
   }
 
   /** True once per key press. */
@@ -79,5 +109,10 @@ export class Input {
   private axis(positive: string[], negative: string[]): number {
     const isDown = (keys: string[]) => keys.some((key) => this.keys.has(key));
     return (isDown(positive) ? 1 : 0) - (isDown(negative) ? 1 : 0);
+  }
+
+  private merge(keys: number, stick: number, positiveButton: number, negativeButton: number): number {
+    const dpad = (this.gamepad.held(positiveButton) ? 1 : 0) - (this.gamepad.held(negativeButton) ? 1 : 0);
+    return MathUtils.clamp(keys + stick + dpad, -1, 1);
   }
 }

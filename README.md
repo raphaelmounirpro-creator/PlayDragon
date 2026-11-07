@@ -39,25 +39,54 @@ Tu préfères ne rien installer ? Prends la **version portable** (`PlayDragon.ex
 
 ## Jouer
 
-| Touche | Action |
-|---|---|
-| **Z Q S D** ou flèches | Diriger le dragon (clavier AZERTY) |
-| **E** (ou Maj) / **A** | Accélérer / freiner |
-| **Clic** ou **Espace** | Cracher une boule de feu (vise avec la souris) |
-| **1 2 3 4** ou boutons en bas à gauche | Pouvoirs spéciaux, payés avec tes points |
-| **Échap** | Pause |
-| **F11** | Plein écran |
+| Clavier (AZERTY) | Manette Xbox | Action |
+|---|---|---|
+| **Z Q S D** ou flèches | Stick gauche / croix | Diriger le dragon |
+| Souris | Stick droit | Viser |
+| **Clic** ou **Espace** | **RT** | Cracher une boule de feu |
+| **E** (ou Maj) / **A** | **RB** / **LT** | Accélérer / freiner |
+| **1 2 3 4** ou boutons en bas à gauche | **X Y B LB** | Pouvoirs spéciaux, payés avec tes points |
+| **Entrée** | **A** | Valider (menus) |
+| **Échap** | **Start** | Pause |
+| **M** | | Couper / remettre le son |
+| **F11** | | Plein écran |
+
+### Niveaux et difficulté
+
+Choisis le niveau et la difficulté dans le menu. Gagner un niveau débloque le suivant.
+
+| Niveau | Ambiance | Château |
+|---|---|---|
+| 1. La vallée du couchant | Coucher de soleil, mer de nuages | Fort à 6 tours, 4 arbalétriers |
+| 2. Les cimes d'ambre | Lumière dorée, hautes montagnes | Citadelle à 8 tours, 6 arbalétriers, un mage |
+| 3. Lune de sang | Nuit étoilée sous une lune rouge | Forteresse à 8 tours, 8 arbalétriers, un mage |
+
+**Facile**, **Normal** ou **Difficile** changent les dégâts que tu prends, le nombre d'ennemis, leur
+résistance et leur cadence de tir. Ton **meilleur score** est sauvegardé pour chaque niveau et chaque
+difficulté.
 
 ### Déroulement
 
 1. **Le voyage** (environ 1 minute) : le dragon suit la rivière. Chaque anneau traversé rapporte
    100 points. Les rochers enlèvent 20 points de vie ; tu peux aussi les détruire en tirant dessus.
-   Des **gargouilles** arrivent par vagues et foncent sur toi : abats-les au feu (150 points chacune), sinon
-   leur choc enlève 10 points de vie.
-2. **Le siège** : le château apparaît. **Q / D** pour en faire le tour (le dragon reste face à lui),
-   **Z / S** pour monter ou descendre. Ses 6 tours et son donjon tirent des carreaux bleus : esquive-les en
-   tournant. Chaque partie du château détruite rapporte 500 points.
-3. **La victoire :** quand tout est détruit, les remparts s'effondrent.
+2. **Le Gardien de pierre** barre la route avant le château : le voyage s'arrête tant qu'il n'est pas
+   vaincu. Esquive ses rochers et sa charge (il se met à trembler juste avant).
+3. **Le siège** : le château apparaît. **Q / D** pour en faire le tour (le dragon reste face à lui),
+   **Z / S** pour monter ou descendre. Chaque tour ou donjon détruit rapporte 500 points.
+4. **La victoire :** quand tout est détruit, les remparts s'effondrent.
+
+### Ennemis
+
+| Ennemi | Où | Comment il attaque | Points |
+|---|---|---|---|
+| Gargouille | Voyage | Fonce sur toi (10 dégâts au contact) | 150 |
+| Gargouille cracheuse | Voyage | Garde ses distances devant toi et crache des pierres | 200 |
+| Chauves-souris | Voyage | Essaim qui tourne autour de toi, gêne la vue et mord. Une flamme suffit, une explosion en tue plusieurs | 25 |
+| Wyverne | Voyage | Arrive par-derrière et mord, puis te double et vole devant toi : c'est le moment de la brûler | 300 |
+| Gardien de pierre | Fin du voyage | Mini-boss avec barre de vie : rochers et charge | 2000 |
+| Arbalétriers | Remparts | Tirent des carreaux enflammés | 100 |
+| Mage | Donjon | Protège le donjon d'un dôme magique tant qu'une tour tient, et lance des orbes qui te suivent | 400 |
+| Tours | Château | Tirent des éclairs bleus | 500 |
 
 ### Pouvoirs spéciaux
 
@@ -86,10 +115,12 @@ Les règles du projet, son architecture et les pièges d'installation sont décr
 
 ## Technique
 
-- **Three.js**, tout est procédural : aucune image ni aucun modèle 3D externe.
-- Ciel en shader, avec soleil et bandes de nuages. Relief en bruit fractal, avec une vallée creusée le long
-  de la rivière.
-- Nuages peints par bruit, avec ombrage et liseré doré. Dragon généré par tubes à rayon variable. Ailes
-  membraneuses déformées à chaque battement.
-- Post-traitement : bloom, étalonnage chaud, vignettage, tone mapping ACES.
-- **Electron** pour l'exe Windows.
+- **Three.js**, tout est procédural : aucune image, aucun modèle 3D, aucun fichier son externe.
+- **Ciel :** en shader, avec soleil ou lune, nuages et étoiles. Chaque niveau a sa palette.
+- **Relief :** en bruit fractal, avec une vallée creusée le long de la rivière.
+- **Dragon et ennemis :** sculptés par code (sections le long de courbes, lames courbes). Les ailes
+  membraneuses se déforment à chaque battement.
+- **Sons et musique :** synthétisés en direct avec la Web Audio API. La musique originale, en ré mineur,
+  devient plus intense au combat.
+- **Post-traitement :** bloom, étalonnage chaud, vignettage, tone mapping ACES.
+- **Electron** pour l'exe Windows. La manette passe par la Gamepad API.

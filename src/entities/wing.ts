@@ -9,6 +9,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
+  Texture,
   Vector3,
 } from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -112,13 +113,24 @@ function buildMembraneGeometry(): BufferGeometry {
   return mergeVertices(geometry, 1e-3);
 }
 
+let sharedMembrane: Texture | null = null;
+
+/** Painted once from the bone layout, then reused by every dragon (player and wyverns). */
+function membraneTexture(): Texture {
+  if (!sharedMembrane) {
+    const bones2D: WingBone2D[] = [
+      ...BONES.map(([start, end]): WingBone2D => [start.x, start.z, end.x, end.z]),
+      [SHOULDER.x, SHOULDER.z, TRAILING_ROOT.x, TRAILING_ROOT.z],
+    ];
+    sharedMembrane = createMembraneTexture(bones2D, fromUv);
+    sharedMembrane.userData.shared = true;
+  }
+  return sharedMembrane;
+}
+
 /** Leather shared by both wings, darker along the bones and glowing between them against the sun. */
 export function createMembraneMaterial(): MeshStandardMaterial {
-  const bones2D: WingBone2D[] = [
-    ...BONES.map(([start, end]): WingBone2D => [start.x, start.z, end.x, end.z]),
-    [SHOULDER.x, SHOULDER.z, TRAILING_ROOT.x, TRAILING_ROOT.z],
-  ];
-  const texture = createMembraneTexture(bones2D, fromUv);
+  const texture = membraneTexture();
   const material = new MeshStandardMaterial({
     map: texture,
     emissive: '#ff5c1f',

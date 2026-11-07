@@ -1,12 +1,12 @@
 import { BoxGeometry, ConeGeometry, Group, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
 import { createRandom } from '../core/random';
-import { riverX, terrainHeight } from './flightPath';
+import type { Landscape } from './landscape';
 
 const VILLAGE_CENTERS = [-900, -2600, -4300, -5700];
 const HOUSES_PER_VILLAGE = 40;
 
 /** Small riverside villages whose lit windows sparkle in the dusk. */
-export function createVillages(): Group {
+export function createVillages(land: Landscape): Group {
   const total = VILLAGE_CENTERS.length * HOUSES_PER_VILLAGE;
   const walls = new InstancedMesh(
     new BoxGeometry(6, 5, 8),
@@ -31,8 +31,8 @@ export function createVillages(): Group {
     for (let i = 0; i < HOUSES_PER_VILLAGE; i++, index++) {
       const z = centerZ + (random() - 0.5) * 260;
       const side = random() < 0.5 ? -1 : 1;
-      const x = riverX(z) + side * (34 + random() * 60);
-      const y = terrainHeight(x, z);
+      const x = land.riverX(z) + side * (34 + random() * 60);
+      const y = land.terrainHeight(x, z);
       const rotation = random() * Math.PI;
 
       dummy.position.set(x, y + 2.5, z);

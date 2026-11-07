@@ -1,4 +1,4 @@
-import { Color, Group, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three';
+import { BufferGeometry, Group, Material, Mesh, Vector3 } from 'three';
 
 export interface Projectile {
   mesh: Mesh;
@@ -6,25 +6,28 @@ export interface Projectile {
   life: number;
 }
 
-/** A set of glowing projectiles (dragon fireballs or castle bolts) that leave a trail. */
+const FORWARD = new Vector3(0, 1, 0);
+
+/** A pool of projectiles of one kind (fireballs, stones, quarrels…) that leave a trail. */
 export class Projectiles {
   readonly group = new Group();
   readonly items: Projectile[] = [];
-  private readonly geometry: SphereGeometry;
-  private readonly material: MeshBasicMaterial;
-  private readonly trail: (position: Vector3, velocity: Vector3) => void;
 
-  constructor(radius: number, color: Color, trail: (position: Vector3, velocity: Vector3) => void) {
-    this.geometry = new SphereGeometry(radius, 16, 12);
-    this.material = new MeshBasicMaterial({ color });
-    this.trail = trail;
-  }
+  /** `orient` aligns the mesh's +Y axis with the flight direction (arrows, quarrels). */
+  constructor(
+    private readonly geometry: BufferGeometry,
+    private readonly material: Material,
+    private readonly trail: (position: Vector3, velocity: Vector3) => void,
+    private readonly orient = false,
+  ) {}
 
-  spawn(position: Vector3, velocity: Vector3, life: number): void {
+  spawn(position: Vector3, velocity: Vector3, life: number): Projectile {
     const mesh = new Mesh(this.geometry, this.material);
     mesh.position.copy(position);
     this.group.add(mesh);
-    this.items.push({ mesh, velocity: velocity.clone(), life });
+    const projectile = { mesh, velocity: velocity.clone(), life };
+    this.items.push(projectile);
+    return projectile;
   }
 
   update(dt: number): void {
@@ -35,6 +38,8 @@ export class Projectiles {
         continue;
       }
       item.mesh.position.addScaledVector(item.velocity, dt);
+      if (this.orient) item.mesh.quaternion.setFromUnitVectors(FORWARD, item.velocity.clone().normalize());
+      else item.mesh.rotation.x += dt * 4;
       this.trail(item.mesh.position, item.velocity);
     }
   }

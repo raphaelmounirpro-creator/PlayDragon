@@ -8,6 +8,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   SphereGeometry,
+  Texture,
   Vector3,
 } from 'three';
 import { smoothstep } from '../core/noise';
@@ -19,7 +20,13 @@ import { createLoft, profile, Section, shapeLoft } from './loft';
 import { createSpikeGeometry, spikeMatrix } from './spike';
 import { createMembraneMaterial, Wing } from './wing';
 
-const MODEL_SCALE = 0.6;
+/** Size and skin tint: the player's dragon, or a smaller rival wyvern. */
+export interface DragonLook {
+  scale: number;
+  skin: string;
+}
+
+const PLAYER_LOOK: DragonLook = { scale: 0.6, skin: '#8a7466' };
 const SPIKE_COUNT = 30;
 const HEAD_SCALE = 1.25;
 const WORLD_UP = new Vector3(0, 1, 0);
@@ -46,10 +53,21 @@ function bodySection(t: number): Section {
 /** Golden edge light of the low sun on the dragon's silhouette. */
 const SUNSET_RIM = new Color(1.1, 0.5, 0.16);
 
-function hideMaterial(): MeshStandardMaterial {
-  const hide = createHideTexture();
-  hide.repeat.set(1, 14);
-  const material = new MeshStandardMaterial({ map: hide, color: '#8a7466', bumpMap: hide, bumpScale: 0.8, roughness: 0.45, metalness: 0.28 });
+let sharedHide: Texture | null = null;
+
+/** The scale painting is the same for every dragon (player or wyvern), so it is made once. */
+function hideTexture(): Texture {
+  if (!sharedHide) {
+    sharedHide = createHideTexture();
+    sharedHide.repeat.set(1, 14);
+    sharedHide.userData.shared = true;
+  }
+  return sharedHide;
+}
+
+function hideMaterial(tint: string): MeshStandardMaterial {
+  const hide = hideTexture();
+  const material = new MeshStandardMaterial({ map: hide, color: tint, bumpMap: hide, bumpScale: 0.8, roughness: 0.45, metalness: 0.28 });
   addBacklight(material, { rimColor: SUNSET_RIM, rimPower: 5 });
   return material;
 }
@@ -112,9 +130,10 @@ export class Dragon {
   private fold = 0;
   private glide = 0;
   private jawTimer = 0;
+  private wingbeat = 0;
 
-  constructor() {
-    const skin = hideMaterial();
+  constructor(look: DragonLook = PLAYER_LOOK) {
+    const skin = hideMaterial(look.skin);
     const horn = hornMaterial();
     this.body = new Mesh(createLoft(160, 28), skin);
     this.body.frustumCulled = false;
@@ -144,7 +163,7 @@ export class Dragon {
       ...foreLegs,
       ...this.wings.map((w) => w.group),
     );
-    this.model.scale.setScalar(MODEL_SCALE);
+    this.model.scale.setScalar(look.scale);
     this.root.add(this.model);
     this.update(0, 0, STILL);
   }
@@ -177,6 +196,13 @@ export class Dragon {
     return this.head.localToWorld(target.copy(MOUTH));
   }
 
+  /** Strength (0 to 1) of a wing downstroke that started since the last call, or 0. */
+  consumeWingbeat(): number {
+    const strength = this.wingbeat;
+    this.wingbeat = 0;
+    return strength;
+  }
+
   /**
    * Flapping alternates with glides while cruising; climbing or boosting means strong fast beats,
    * diving folds the wings back.
@@ -189,7 +215,9 @@ export class Dragon {
     this.fold = MathUtils.damp(this.fold, Math.min(0.85, diving * 1.3), 4, dt);
 
     const beat = (1 - this.glide * 0.85) * (1 - this.fold * 0.8);
+    const previousBeat = Math.floor((this.flapPhase - Math.PI / 2) / (Math.PI * 2));
     this.flapPhase += dt * (3.2 + motion.effort * 2.6 + climbing * 2.2) * (1 - this.glide * 0.6);
+    if (Math.floor((this.flapPhase - Math.PI / 2) / (Math.PI * 2)) !== previousBeat) this.wingbeat = beat;
     const flap = Math.sin(this.flapPhase) * 0.72 * beat + 0.16 + this.glide * 0.24 - this.fold * 0.2;
     const sweep = Math.cos(this.flapPhase) * 0.16 * beat;
     // The wing on the inside of the turn dips a little more.

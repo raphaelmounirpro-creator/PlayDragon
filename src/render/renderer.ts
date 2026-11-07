@@ -1,6 +1,7 @@
 import {
   ACESFilmicToneMapping,
   Camera,
+  Mesh,
   PMREMGenerator,
   Scene,
   SRGBColorSpace,
@@ -59,14 +60,18 @@ export class Renderer {
     this.resize();
   }
 
-  /** Image-based lighting baked from the sunset sky, so scales and water reflect it. */
-  createEnvironment(): Texture {
+  /** Image-based lighting baked from the level's sky, so scales and water reflect it. */
+  createEnvironment(sky: Sky): Texture {
     const skyScene = new Scene();
-    skyScene.add(new Sky().mesh);
+    skyScene.add(new Mesh(sky.mesh.geometry, sky.mesh.material));
     const generator = new PMREMGenerator(this.webgl);
     const environment = generator.fromScene(skyScene, 0.04, 0.1, 5000).texture;
     generator.dispose();
     return environment;
+  }
+
+  setExposure(exposure: number): void {
+    this.webgl.toneMappingExposure = exposure;
   }
 
   resize(): void {
