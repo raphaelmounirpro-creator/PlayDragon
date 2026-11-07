@@ -34,6 +34,11 @@ détruire. Le jeu est livré en `.exe` Windows portable.
   `electron-v33.3.1-win32-x64.zip` depuis les releases GitHub d'Electron, vérifier son SHA-256 dans
   `node_modules/electron/checksums.json`, l'extraire dans `node_modules/electron/dist`, puis écrire
   `electron.exe` dans `node_modules/electron/path.txt`.
+- **Smart App Control** (Windows 11), une fois activé, bloque tout exe non signé. electron-builder échoue
+  alors avec `spawn UNKNOWN` en lançant l'installeur qu'il vient de créer, et les joueurs ne peuvent pas
+  lancer l'installeur. Il n'y a pas de contournement : la seule vraie solution est de signer le code
+  (certificat payant). Vérifier l'état dans `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy`, valeur
+  `VerifiedAndReputablePolicyState` (1 = activé).
 - Un terminal VS Code peut définir `ELECTRON_RUN_AS_NODE=1`. Retire cette variable avant de lancer
   `electron`.
 
