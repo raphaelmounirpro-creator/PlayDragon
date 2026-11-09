@@ -102,9 +102,9 @@ const BELLY_END = 0.88;
 function drawScale(context: CanvasRenderingContext2D, x: number, y: number): void {
   const half = SCALE_SIZE * 0.62;
   const gradient = context.createRadialGradient(x, y + 2, 1, x, y + 4, half * 1.3);
-  gradient.addColorStop(0, '#5f4636');
-  gradient.addColorStop(0.65, '#33241c');
-  gradient.addColorStop(1, '#1b130f');
+  gradient.addColorStop(0, '#665650');
+  gradient.addColorStop(0.65, '#332b2b');
+  gradient.addColorStop(1, '#171315');
   context.fillStyle = gradient;
   context.beginPath();
   context.moveTo(x - half, y);
@@ -217,27 +217,38 @@ export function createMembraneTexture(bones: WingBone2D[], toRest: (u: number, v
       for (const bone of bones) distance = Math.min(distance, distanceToSegment(x, z, bone));
       const panel = smoothstep(0.6 * scale, 6 * scale, distance) * (0.85 + 0.15 * valueNoise((x * 0.4) / scale, (z * 0.4) / scale));
       const index = (py * size + px) * 4;
-      image.data[index] = 24 + 136 * panel;
-      image.data[index + 1] = 12 + 88 * panel;
-      image.data[index + 2] = 9 + 36 * panel;
+      const grain = 0.92 + random() * 0.16;
+      image.data[index] = (19 + 112 * panel) * grain;
+      image.data[index + 1] = (10 + 57 * panel) * grain;
+      image.data[index + 2] = (10 + 26 * panel) * grain;
       image.data[index + 3] = 255;
     }
   }
   context.putImageData(image, 0, 0);
 
-  context.strokeStyle = 'rgba(12,6,4,0.55)';
-  for (let i = 0; i < 45; i++) {
-    let x = random() * size;
-    let y = random() * size;
-    context.lineWidth = 0.6 + random() * 1.8;
-    context.beginPath();
-    context.moveTo(x, y);
-    for (let s = 0; s < 8; s++) {
-      x += (random() - 0.5) * 40;
-      y += (random() - 0.3) * 40;
-      context.lineTo(x, y);
+  // Fine branching veins grow from the fingers into each leather panel.
+  const [xMin, zMin] = toRest(0, 0);
+  const [xMax, zMax] = toRest(1, 1);
+  const pixel = (x: number, z: number): [number, number] => [(x - xMin) / (xMax - xMin) * size, (1 - (z - zMin) / (zMax - zMin)) * size];
+  context.strokeStyle = 'rgba(16,8,7,0.35)';
+  context.lineWidth = 0.7;
+  for (const [ax, az, bx, bz] of bones) {
+    const length = Math.hypot(bx - ax, bz - az);
+    if (length === 0) continue;
+    for (let i = 1; i <= 5; i++) {
+      const t = i / 6;
+      const x = ax + (bx - ax) * t;
+      const z = az + (bz - az) * t;
+      for (const side of [-1, 1]) {
+        const reach = (1.2 + random() * 1.8) * scale * side;
+        const endX = x - (bz - az) / length * reach + (bx - ax) * 0.12;
+        const endZ = z + (bx - ax) / length * reach + (bz - az) * 0.12;
+        context.beginPath();
+        context.moveTo(...pixel(x, z));
+        context.quadraticCurveTo(...pixel(x, z + reach * 0.5), ...pixel(endX, endZ));
+        context.stroke();
+      }
     }
-    context.stroke();
   }
   for (let i = 0; i < 260; i++) {
     const alpha = 0.15 + random() * 0.5;

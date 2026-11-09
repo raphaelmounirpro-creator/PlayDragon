@@ -60,8 +60,8 @@ function createHorns(horn: Material): Mesh[] {
   const small = profile([[0, 0.34], [1, 0.03]]);
   for (const side of [-1, 1]) {
     horns.push(
-      loftMesh(curve([[0.8 * side, 1.9, 0.7], [1.75 * side, 3.1, 2.3], [2.4 * side, 3.95, 4.7], [2.2 * side, 4.1, 7.7]]), (t) => round(great(t)), horn, 24, 10),
-      loftMesh(curve([[1.3 * side, 0.9, 1], [2.5 * side, 1.2, 2.4], [3.3 * side, 1.3, 3.7]]), (t) => round(small(t)), horn, 14, 8),
+      loftMesh(curve([[0.8 * side, 1.9, 0.7], [1.6 * side, 3.8, 1.6], [2 * side, 6, 3.5], [1.7 * side, 7.2, 5.7]]), (t) => round(great(t)), horn, 24, 10),
+      loftMesh(curve([[1.3 * side, 0.9, 1], [2.5 * side, 2, 2.4], [3.1 * side, 3.1, 4.1]]), (t) => round(small(t)), horn, 14, 8),
     );
   }
   return horns;

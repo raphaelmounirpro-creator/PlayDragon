@@ -26,16 +26,18 @@ export interface DragonLook {
   skin: string;
 }
 
-const PLAYER_LOOK: DragonLook = { scale: 0.6, skin: '#8a7466' };
-const SPIKE_COUNT = 30;
+const PLAYER_LOOK: DragonLook = { scale: 0.6, skin: '#716564' };
+const SPIKE_COUNT = 38;
 const HEAD_SCALE = 1.25;
+const ARMOR_ROWS = 24;
+const ARMOR_COLUMNS = 7;
 const WORLD_UP = new Vector3(0, 1, 0);
 const FORWARD = new Vector3(0, 0, -1);
 
 // Long S-shaped neck carrying the head high, as in the reference painting. Index 0 is the head end.
 const SPINE_REST = [
-  [0, 10, -25], [0, 8.6, -20.5], [0, 6.2, -15.5], [0, 3.5, -10], [0, 1.6, -4.5], [0, 0.8, 1.5],
-  [0, 0.8, 8], [0, 1.2, 16], [0, 0.6, 24], [0, -0.4, 32], [0, 0, 40], [0, 1, 48], [0, 0.6, 56],
+  [0, 14, -23], [0, 11.8, -19.5], [0, 8, -15.5], [0, 4.5, -10], [0, 1.6, -4.5], [0, 0.8, 1.5],
+  [0, 0.8, 8], [1, 1.2, 16], [3, 2, 24], [6, 2.6, 32], [10, 2, 40], [13, 0, 48], [14, -4, 57],
 ].map(([x, y, z]) => new Vector3(x, y, z));
 const FIRST_TAIL_POINT = 7;
 
@@ -44,7 +46,7 @@ const bodyWidth = profile([[0, 1.2], [0.12, 1.55], [0.22, 2.5], [0.3, 3.9], [0.3
 const bodyHeight = profile([[0, 1.35], [0.12, 1.75], [0.22, 3.0], [0.3, 4.4], [0.36, 4.1], [0.41, 3.3], [0.47, 3.1], [0.56, 2.1], [0.74, 1.05], [0.92, 0.42], [1, 0.1]]);
 const bodyRidge = profile([[0, 0.06], [0.3, 0.1], [0.6, 0.12], [1, 0.16]]);
 const bodyKeel = profile([[0, 0], [0.22, 0.04], [0.3, 0.16], [0.37, 0.06], [0.46, 0], [1, 0]]);
-const spikeSize = profile([[0, 1.0], [0.15, 1.6], [0.32, 2.6], [0.5, 1.9], [0.8, 1.1], [0.95, 1.3], [1, 0.9]]);
+const spikeSize = profile([[0, 1.6], [0.15, 2.2], [0.32, 2.4], [0.5, 1.7], [0.8, 0.95], [0.95, 0.6], [1, 0.25]]);
 
 function bodySection(t: number): Section {
   return { width: bodyWidth(t), height: bodyHeight(t), ridge: bodyRidge(t), keel: bodyKeel(t) };
@@ -59,7 +61,7 @@ let sharedHide: Texture | null = null;
 function hideTexture(): Texture {
   if (!sharedHide) {
     sharedHide = createHideTexture();
-    sharedHide.repeat.set(1, 14);
+    sharedHide.repeat.set(1, 7);
     sharedHide.userData.shared = true;
   }
   return sharedHide;
@@ -67,7 +69,7 @@ function hideTexture(): Texture {
 
 function hideMaterial(tint: string): MeshStandardMaterial {
   const hide = hideTexture();
-  const material = new MeshStandardMaterial({ map: hide, color: tint, bumpMap: hide, bumpScale: 0.8, roughness: 0.45, metalness: 0.28 });
+  const material = new MeshStandardMaterial({ map: hide, color: tint, bumpMap: hide, bumpScale: 0.5, roughness: 0.62, metalness: 0.12 });
   addBacklight(material, { rimColor: SUNSET_RIM, rimPower: 5 });
   return material;
 }
@@ -114,6 +116,7 @@ export class Dragon {
   private readonly model = new Group();
   private readonly body: Mesh;
   private readonly spikes: InstancedMesh;
+  private readonly armor: InstancedMesh;
   private readonly head: Group;
   private readonly jaw: Group;
   private readonly hindLegs: Group[];
@@ -139,6 +142,8 @@ export class Dragon {
     this.body.frustumCulled = false;
     this.spikes = new InstancedMesh(createSpikeGeometry(0.6, 0.45), horn, SPIKE_COUNT);
     this.spikes.frustumCulled = false;
+    this.armor = new InstancedMesh(new SphereGeometry(1, 6, 4), skin, ARMOR_ROWS * ARMOR_COLUMNS);
+    this.armor.frustumCulled = false;
     const { head, jaw } = createHead({ skin, horn });
     this.head = head;
     this.jaw = jaw;
@@ -155,6 +160,7 @@ export class Dragon {
     this.model.add(
       this.body,
       this.spikes,
+      this.armor,
       this.head,
       this.tailBlade,
       ...this.tailSpikes,
@@ -179,6 +185,7 @@ export class Dragon {
     this.bendSpine(time);
     shapeLoft(this.body.geometry, this.curve, bodySection);
     this.placeSpikes();
+    this.placeArmor();
     this.placeHead();
     this.placeTail();
     this.swingLegs();
@@ -236,7 +243,7 @@ export class Dragon {
     for (let i = FIRST_TAIL_POINT; i < this.spine.length; i++) {
       const weight = (i - FIRST_TAIL_POINT + 1) / tailPoints;
       const sway = Math.sin(time * 1.7 - i * 0.6) * 3.2 * weight * (1 - Math.min(1, Math.abs(this.tailTurn)) * 0.6);
-      this.spine[i].x = sway - this.tailTurn * 10 * Math.pow(weight, 1.4);
+      this.spine[i].x = SPINE_REST[i].x + sway - this.tailTurn * 10 * Math.pow(weight, 1.4);
       this.spine[i].y = SPINE_REST[i].y + Math.sin(this.flapPhase - i * 0.5) * 0.9 * weight - this.tailClimb * 5 * weight;
     }
   }
@@ -269,16 +276,37 @@ export class Dragon {
     this.head.quaternion.setFromUnitVectors(FORWARD, this.curve.getTangent(0).negate().normalize());
   }
 
+  /** Overlapping raised scutes follow the neck, shoulders and tail as the spine bends. */
+  private placeArmor(): void {
+    const matrix = new Matrix4();
+    for (let row = 0; row < ARMOR_ROWS; row++) {
+      const t = 0.04 + row / (ARMOR_ROWS - 1) * 0.8;
+      const { point, tangent, side, up } = this.frame(t);
+      const width = bodyWidth(t);
+      const height = bodyHeight(t);
+      for (let column = 0; column < ARMOR_COLUMNS; column++) {
+        const angle = ((column + (row % 2) * 0.35) / (ARMOR_COLUMNS - 1) - 0.5) * 2.6;
+        const outward = up.clone().multiplyScalar(Math.cos(angle)).addScaledVector(side, Math.sin(angle));
+        const across = new Vector3().crossVectors(outward, tangent).normalize();
+        matrix.makeBasis(across, outward, tangent);
+        matrix.scale(new Vector3(width * 0.28, 0.15 * Math.min(1, width), 0.9 * Math.min(1.4, width)));
+        matrix.setPosition(point.clone().addScaledVector(side, Math.sin(angle) * width).addScaledVector(up, Math.cos(angle) * height * (1 + bodyRidge(t) * Math.cos(angle))));
+        this.armor.setMatrixAt(row * ARMOR_COLUMNS + column, matrix);
+      }
+    }
+    this.armor.instanceMatrix.needsUpdate = true;
+  }
+
   /** Spade-shaped blade at the tip and a pair of side spikes, like the painting's spiky tail. */
   private placeTail(): void {
     const end = this.frame(1);
     this.tailBlade.matrixAutoUpdate = false;
-    spikeMatrix(this.tailBlade.matrix, end.point, end.tangent, end.up, 1.8, 3.6);
+    spikeMatrix(this.tailBlade.matrix, end.point, end.tangent, end.up, 0.9, 4.8);
     const near = this.frame(0.94);
     this.tailSpikes.forEach((spike, i) => {
       const outward = near.side.clone().multiplyScalar(i === 0 ? 1 : -1);
       spike.matrixAutoUpdate = false;
-      spikeMatrix(spike.matrix, near.point, outward.addScaledVector(near.tangent, 1.2), near.up, 1.2, 2.6);
+      spikeMatrix(spike.matrix, near.point, outward.addScaledVector(near.tangent, 1.2), near.up, 0.65, 1.8);
     });
   }
 

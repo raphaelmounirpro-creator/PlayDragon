@@ -37,14 +37,14 @@ const v = (x: number, y: number, z: number) => new Vector3(x, y, z);
 /** Huge pointed wings, like the reference painting. */
 export const DRAGON_WING: WingShape = {
   shoulder: v(2.2, 3.9, -4),
-  elbow: v(12, 7, -2),
-  wrist: v(22, 9, -6),
-  tips: [v(56, 8.5, -3), v(47, 3.5, 10), v(36, 1, 19), v(22, 1, 22)],
+  elbow: v(12, 8, -1),
+  wrist: v(24, 14, -9),
+  tips: [v(58, 17, -7), v(49, 6, 10), v(36, 0, 22), v(21, -1, 24)],
   trailingRoot: v(3, 2.4, 10),
-  armRadii: [1.05, 0.8],
-  fingerRadii: [0.5, 0.42, 0.36, 0.32],
-  scallopDepth: 0.38,
-  claw: 2.4,
+  armRadii: [1.15, 0.85],
+  fingerRadii: [0.48, 0.38, 0.3, 0.25],
+  scallopDepth: 0.48,
+  claw: 3.0,
 };
 
 const SUBDIVISIONS = 6;
@@ -169,8 +169,8 @@ export function createMembraneMaterial(shape: WingShape = DRAGON_WING, tint = '#
     color: tint,
     emissive: '#ff5c1f',
     emissiveMap: texture,
-    emissiveIntensity: 0.3,
-    roughness: 0.75,
+    emissiveIntensity: 0.12,
+    roughness: 0.85,
     metalness: 0.05,
     side: DoubleSide,
   });

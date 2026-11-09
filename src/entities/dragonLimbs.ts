@@ -51,9 +51,9 @@ export function createForeLeg(side: number, materials: LimbMaterials): Group {
   const leg = new Group();
   leg.position.set(2.0 * side, -2.4, -5.2);
   const shoulder = new Vector3(0, 0, 0);
-  const elbow = new Vector3(0.7 * side, -2.0, 1.4);
-  const wrist = new Vector3(0.4 * side, -2.6, -0.8);
-  const hand = new Vector3(0.3 * side, -2.4, -1.8);
+  const elbow = new Vector3(0.7 * side, -3.6, 1.2);
+  const wrist = new Vector3(0.4 * side, -5.2, -0.3);
+  const hand = new Vector3(0.3 * side, -5.1, -1.5);
   const thickness = profile([[0, 1.3], [0.35, 0.75], [0.7, 0.5], [1, 0.42]]);
   leg.add(limb([shoulder, elbow, wrist, hand], thickness, materials.skin, 20, 12));
   for (const spread of [-0.4, 0, 0.4]) {
