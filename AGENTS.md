@@ -150,11 +150,12 @@ avec Claude Code, et leurs sources officielles n'ont pas été vérifiées. Voir
 
 ## Publier une version
 
-Le bouton de téléchargement du README pointe vers
-`releases/latest/download/PlayDragon-Setup.exe`. Il sert donc toujours la dernière Release GitHub. Pour
-publier une nouvelle version :
+Le bouton de téléchargement du README pointe vers `releases/latest/download/PlayDragon.exe`, sur le dépôt
+`raphaelmounirpro-creator/PlayDragon`. Il sert donc toujours la dernière Release GitHub. Pour publier une
+nouvelle version :
 
 1. Augmenter `version` dans `package.json`.
-2. `npm test`, puis `npm run dist`.
-3. Créer une Release GitHub `vX.Y.Z` et y joindre `release/PlayDragon-Setup.exe` et
-   `release/PlayDragon.exe`, sans changer ces noms de fichiers.
+2. `npm test`, puis `npm run dist`. Si Smart App Control est activé, l'installeur ne peut pas être construit :
+   lancer `npm run build`, puis `npx electron-builder --win portable --publish never`.
+3. Créer une Release GitHub `vX.Y.Z` et y joindre `release/PlayDragon.exe` (et `release/PlayDragon-Setup.exe` s'il
+   existe), sans changer ces noms de fichiers.

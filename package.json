@@ -1,7 +1,7 @@
 {
   "name": "playdragon",
   "productName": "PlayDragon",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Jeu 3D : un dragon survole une vallée au coucher du soleil et doit détruire le château au bout du chemin.",
   "author": "Raphael Mounir",
   "license": "UNLICENSED",
@@ -61,7 +61,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "raphaelmounirprivate-dot",
+      "owner": "raphaelmounirpro-creator",
       "repo": "PlayDragon"
     }
   },

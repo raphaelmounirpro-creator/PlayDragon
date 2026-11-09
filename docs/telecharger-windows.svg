@@ -1,28 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="560" height="112" viewBox="0 0 560 112" role="img" aria-label="Télécharger PlayDragon pour Windows">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-label="Télécharger PlayDragon.exe pour Windows">
   <defs>
-    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffa44a"/>
-      <stop offset="1" stop-color="#c4461b"/>
+    <linearGradient id="button" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff9e40"/>
+      <stop offset="1" stop-color="#b53c12"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff2bf"/>
+      <stop offset="0.5" stop-color="#ffc247"/>
+      <stop offset="1" stop-color="#f08a1e"/>
     </linearGradient>
     <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
       <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect x="2" y="2" width="556" height="108" rx="14" fill="#3b1608"/>
-  <rect x="6" y="6" width="548" height="100" rx="11" fill="url(#fill)"/>
-  <rect x="6" y="6" width="548" height="50" rx="11" fill="url(#shine)"/>
+
+  <!-- Thick golden frame on a dark edge: stands out on GitHub's light and dark themes alike -->
+  <rect x="0" y="0" width="1200" height="340" rx="32" fill="#2a0e05"/>
+  <rect x="14" y="14" width="1172" height="312" rx="24" fill="none" stroke="url(#frame)" stroke-width="14"/>
+  <rect x="34" y="34" width="1132" height="272" rx="14" fill="url(#button)"/>
+  <rect x="34" y="34" width="1132" height="136" rx="14" fill="url(#shine)"/>
+
   <!-- Windows logo -->
-  <g transform="translate(34 30)" fill="#fff8ec">
-    <rect x="0" y="0" width="23" height="23" rx="1.5"/>
-    <rect x="27" y="0" width="23" height="23" rx="1.5"/>
-    <rect x="0" y="27" width="23" height="23" rx="1.5"/>
-    <rect x="27" y="27" width="23" height="23" rx="1.5"/>
+  <g transform="translate(78 112)" fill="#fff8ec">
+    <rect x="0" y="0" width="55" height="55" rx="3"/>
+    <rect x="62" y="0" width="55" height="55" rx="3"/>
+    <rect x="0" y="62" width="55" height="55" rx="3"/>
+    <rect x="62" y="62" width="55" height="55" rx="3"/>
   </g>
+
   <!-- Download arrow -->
-  <g transform="translate(500 30)" fill="none" stroke="#fff8ec" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 2v32M2 22l12 12 12-12M0 48h28"/>
+  <g transform="translate(1022 106)" fill="none" stroke="#fff8ec" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 4v84M12 52l38 38 38-38M4 124h92"/>
   </g>
-  <text x="104" y="56" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#fff8ec" letter-spacing="1">TÉLÉCHARGER LE JEU</text>
-  <text x="105" y="84" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#ffe2a8">Installeur Windows · gratuit · PlayDragon-Setup.exe</text>
+
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" text-anchor="middle">
+    <text x="600" y="124" font-size="78" font-weight="800" fill="#fff8ec" textLength="810" lengthAdjust="spacingAndGlyphs">TÉLÉCHARGER LE JEU</text>
+    <rect x="370" y="150" width="460" height="80" rx="12" fill="#3b1608" stroke="#ffe2a8" stroke-width="3"/>
+    <text x="600" y="208" font-size="54" font-weight="800" fill="#ffe9b8" textLength="390" lengthAdjust="spacingAndGlyphs">PlayDragon.exe</text>
+    <text x="600" y="278" font-size="30" font-weight="600" fill="#fff3d6">Windows · gratuit · rien à installer</text>
+  </g>
 </svg>

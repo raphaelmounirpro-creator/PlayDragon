@@ -1,41 +1,52 @@
-<h1 align="center">PlayDragon</h1>
-
 <p align="center">
-  <a href="https://github.com/raphaelmounirprivate-dot/PlayDragon/releases/latest/download/PlayDragon-Setup.exe">
-    <img src="docs/telecharger-windows.svg" width="560" alt="Télécharger PlayDragon pour Windows">
+  <a href="https://github.com/raphaelmounirpro-creator/PlayDragon/releases/latest/download/PlayDragon.exe">
+    <img src="docs/telecharger-windows.svg" width="100%" alt="Télécharger PlayDragon.exe pour Windows">
   </a>
 </p>
 
+<h1 align="center">PlayDragon</h1>
+
 <p align="center">
-  <b><a href="https://github.com/raphaelmounirprivate-dot/PlayDragon/releases/latest/download/PlayDragon-Setup.exe">⬇ Télécharger l'installeur (PlayDragon-Setup.exe)</a></b>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/raphaelmounirprivate-dot/PlayDragon/releases/latest/download/PlayDragon.exe">version portable sans installation</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/raphaelmounirprivate-dot/PlayDragon/releases/latest">toutes les versions</a>
+  <a href="https://github.com/raphaelmounirpro-creator/PlayDragon/releases/latest">Toutes les versions</a>
 </p>
 
 <p align="center">
   <img src="docs/apercu-menu.jpg" width="900" alt="Écran titre de PlayDragon : un dragon au-dessus d'une mer de nuages au coucher du soleil">
 </p>
 
-Un dragon survole une vallée au coucher du soleil, au-dessus d'une mer de nuages. Traverse les anneaux de
-lumière, abats les gargouilles et évite les rochers flottants. Au bout du chemin, un château t'attend :
-réduis-le en cendres avant que ses tours ne t'abattent.
+## C'est quoi, PlayDragon ?
 
-## Installer
+PlayDragon est un jeu d'action en 3D pour Windows. Tu pilotes un dragon au-dessus d'une vallée, au coucher
+du soleil, avec une mission : remonter la rivière jusqu'au château qui t'attend au bout du chemin, puis le
+réduire en cendres.
 
-1. Clique sur **Télécharger le jeu** ci-dessus.
-2. Lance `PlayDragon-Setup.exe`. Le jeu n'est pas signé, donc Windows SmartScreen peut afficher
-   « Windows a protégé votre ordinateur » : clique sur **Informations complémentaires**, puis
-   **Exécuter quand même**.
-3. Suis l'installeur. Il crée un raccourci **PlayDragon** sur le bureau et dans le menu Démarrer. Pour
-   désinstaller : Paramètres › Applications.
+En route, tu traverses des anneaux de lumière pour marquer des points, tu évites les rochers flottants et tu
+abats gargouilles, chauves-souris et wyvernes. Avant le château, un boss te barre la route. Vient ensuite le
+siège : tu tournes autour des remparts et tu détruis les tours une à une, sous le feu des arbalétriers.
 
-Tu préfères ne rien installer ? Prends la **version portable** (`PlayDragon.exe`) et lance-la directement.
+Dans le jeu, tu trouveras :
+
+- **3 niveaux**, chacun avec son ambiance, son château et son boss ;
+- **3 difficultés** : Facile, Normal et Difficile ;
+- **4 pouvoirs spéciaux**, payés avec les points que tu marques ;
+- **des améliorations permanentes** pour ton dragon, achetées avec l'or gagné à chaque partie ;
+- **des commandes au choix** : clavier AZERTY et souris, ou manette Xbox, avec des touches modifiables ;
+- **un jeu qui reste chez toi** : aucun compte, aucune connexion. Tes scores, ton or et tes réglages restent
+  sur ton PC.
 
 <p align="center">
-  <img src="docs/apercu-vol.jpg" width="900" alt="En vol : le dragon au-dessus des nuages, anneaux de lumière et pouvoirs en bas à gauche">
+  <img src="docs/apercu-vol.jpg" width="900" alt="En vol : le dragon face aux anneaux de lumière, un rocher flottant et des gargouilles, avec les pouvoirs en bas à gauche">
 </p>
+
+## Lancer le jeu
+
+1. Clique sur le gros bouton en haut de la page.
+2. Lance `PlayDragon.exe`. Il n'y a rien à installer : le jeu démarre directement.
+3. Le jeu n'est pas signé, donc Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ».
+   Clique sur **Informations complémentaires**, puis **Exécuter quand même**.
+
+Sur Windows 11, si **Smart App Control** est activé, Windows bloque le jeu sans proposer de le lancer quand
+même.
 
 ## Jouer
 
